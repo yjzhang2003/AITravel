@@ -1,3 +1,5 @@
+import '../config/env.js';
+
 import { buildMockItinerary } from '../utils/mockData.js';
 
 export const llmService = {

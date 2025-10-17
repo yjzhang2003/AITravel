@@ -1,5 +1,11 @@
+import '../config/env.js';
+
 export const isSupabaseConfigured = () =>
-  Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  Boolean(
+    process.env.SUPABASE_URL &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY &&
+      process.env.SUPABASE_ANON_KEY
+  );
 
 export const isLLMConfigured = () => Boolean(process.env.LLM_API_URL && process.env.LLM_API_KEY);
 

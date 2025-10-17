@@ -1,4 +1,4 @@
-import { supabaseClient } from './supabaseClient.js';
+import { supabaseAdminClient } from './supabaseClient.js';
 import { llmService } from './llmService.js';
 import { budgetService } from './budgetService.js';
 import { buildMockItinerary } from '../utils/mockData.js';
@@ -13,11 +13,11 @@ export const itineraryService = {
       return [];
     }
 
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !supabaseAdminClient) {
       return [buildMockItinerary({ destination: '东京', companions: 3, budget: 12000 })];
     }
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdminClient
       .from('itineraries')
       .select('*')
       .eq('user_id', userId)
@@ -44,11 +44,11 @@ export const itineraryService = {
       created_at: new Date().toISOString()
     };
 
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !supabaseAdminClient) {
       return record;
     }
 
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabaseAdminClient
       .from('itineraries')
       .insert(record)
       .select()
@@ -64,8 +64,8 @@ export const itineraryService = {
   async calculateBudget({ itineraryId, overrides, itinerary }) {
     let currentItinerary = itinerary;
 
-    if (!currentItinerary && isSupabaseConfigured() && itineraryId) {
-      const { data, error } = await supabaseClient
+    if (!currentItinerary && isSupabaseConfigured() && supabaseAdminClient && itineraryId) {
+      const { data, error } = await supabaseAdminClient
         .from('itineraries')
         .select('*')
         .eq('id', itineraryId)
@@ -79,7 +79,7 @@ export const itineraryService = {
 
       const newBudget = budgetService.calculate(currentItinerary, overrides);
 
-      await supabaseClient
+      await supabaseAdminClient
         .from('itineraries')
         .update({ budget: newBudget })
         .eq('id', itineraryId);

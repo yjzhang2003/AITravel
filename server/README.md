@@ -12,9 +12,9 @@ npm run dev --workspace=server
 
 请参考 `server/.env.example`，主要包含：
 
-- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY`
 - `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL`
-- `VOICE_API_URL` / `VOICE_API_KEY` / `VOICE_SECRET_KEY`
+- `VOICE_API_URL` / `VOICE_API_KEY` / `VOICE_SECRET_KEY` / `VOICE_APP_ID`
 - `AMAP_API_KEY`
 - `SERVE_CLIENT`（可选，设为 `true` 时会回源托管 `client/dist` 静态文件）
 
