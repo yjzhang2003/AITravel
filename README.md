@@ -47,7 +47,7 @@ docker run -p 5174:5174 --env-file server/.env ai-travel-planner
 
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`
 - `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL`
-- `VOICE_API_URL` / `VOICE_API_KEY`（如使用科大讯飞，可填写自建转写服务地址与凭证）
+- `VOICE_API_URL` / `VOICE_API_KEY` / `VOICE_SECRET_KEY`（如使用科大讯飞等 Web API，请填写服务端转写接口及签名凭证）
 - `AMAP_API_KEY`（高德 Web JS API Key）
 
 前端会通过受控接口读取必要信息，但不会显示或缓存任何密钥。

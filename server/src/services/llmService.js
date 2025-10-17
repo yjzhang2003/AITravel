@@ -10,16 +10,32 @@ export const llmService = {
       return buildMockItinerary(request);
     }
 
-    const response = await fetch(llmUrl, {
+    const trimmedUrl = llmUrl.replace(/\/$/, '');
+    const endpoint = /\/(responses|chat\/completions)$/i.test(trimmedUrl)
+      ? trimmedUrl
+      : `${trimmedUrl}/chat/completions`;
+
+    const useChatCompletions = endpoint.endsWith('/chat/completions');
+
+    const payload = useChatCompletions
+      ? {
+          model: llmModel,
+          messages: buildMessages(request),
+          temperature: 0.6,
+          response_format: { type: 'json_object' }
+        }
+      : {
+          model: llmModel,
+          input: buildPrompt(request)
+        };
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${llmKey}`
       },
-      body: JSON.stringify({
-        model: llmModel,
-        input: buildPrompt(request)
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -62,4 +78,19 @@ const normalizeLLMResponse = (data, request) => {
   }
 
   return buildMockItinerary(request);
+};
+
+const buildMessages = (request) => {
+  const prompt = buildPrompt(request);
+  return [
+    {
+      role: 'system',
+      content:
+        '你是一个旅行策划专家，需要基于用户需求输出 JSON 格式的行程规划。请严格按照用户要求返回 summary、dailyPlans、recommendedHotels、transportationTips 等字段。'
+    },
+    {
+      role: 'user',
+      content: prompt
+    }
+  ];
 };
