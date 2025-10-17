@@ -2,7 +2,7 @@ export const ItineraryHistory = ({ itineraries, onSelect }) => {
   if (!itineraries?.length) {
     return (
       <section className="panel muted">
-        <p>登录后可保存多份行程。当前仅展示示例数据。</p>
+        <p>暂无历史行程。登录后可保存多份计划，或直接生成新的行程体验。</p>
       </section>
     );
   }

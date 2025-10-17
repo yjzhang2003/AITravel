@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { AuthPanel } from './components/AuthPanel.jsx';
-import { BudgetPanel } from './components/BudgetPanel.jsx';
-import { ItineraryForm } from './components/ItineraryForm.jsx';
-import { ItineraryHistory } from './components/ItineraryHistory.jsx';
-import { ItinerarySummary } from './components/ItinerarySummary.jsx';
-import { MapView } from './components/MapView.jsx';
+import { AuthPage } from './pages/AuthPage.jsx';
+import { DashboardPage } from './pages/DashboardPage.jsx';
 
 const emptyForm = {
   destination: '',
@@ -23,6 +19,7 @@ export default function App() {
   const [budget, setBudget] = useState(null);
   const [history, setHistory] = useState([]);
   const [session, setSession] = useState(null);
+  const [guestMode, setGuestMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -47,8 +44,10 @@ export default function App() {
   useEffect(() => {
     if (session?.user?.id) {
       fetchHistory(session.user.id);
+    } else if (guestMode) {
+      setHistory([]);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, guestMode]);
 
   const fetchHistory = async (userId) => {
     try {
@@ -147,6 +146,7 @@ export default function App() {
 
       const data = await response.json();
       setSession(data);
+      setGuestMode(false);
       return data;
     } finally {
       setAuthLoading(false);
@@ -193,40 +193,44 @@ export default function App() {
     return items.join('；');
   }, [configStatus]);
 
+  const handleLogout = () => {
+    setSession(null);
+    setGuestMode(false);
+    setHistory([]);
+    setItinerary(null);
+    setBudget(null);
+    setFormData(emptyForm);
+  };
+
+  if (!session && !guestMode) {
+    return (
+      <AuthPage
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        loading={authLoading}
+        configStatus={configStatus}
+        onContinue={() => setGuestMode(true)}
+      />
+    );
+  }
+
   return (
-    <main className="layout">
-      <header className="hero">
-        <div>
-          <h1>AI 旅行规划师</h1>
-          <p>
-            通过语音或文字描述旅行需求，系统自动生成专属行程和预算，并在地图上展示关键地点。
-          </p>
-          {configHint && <p className="muted">{configHint}</p>}
-        </div>
-      </header>
-      <div className="grid">
-        <div className="left-column">
-          <AuthPanel
-            session={session}
-            onLogin={handleLogin}
-            onRegister={handleRegister}
-            loading={authLoading}
-          />
-          <ItineraryForm
-            formData={formData}
-            onChange={setFormData}
-            onSubmit={handleGenerate}
-            loading={loading}
-          />
-          <ItineraryHistory itineraries={history} onSelect={handleHistorySelect} />
-        </div>
-        <div className="right-column">
-          {error && <div className="panel error">{error}</div>}
-          <ItinerarySummary itinerary={normalizedItinerary} />
-          <BudgetPanel budget={budget} onRecalculate={handleRecalculateBudget} recalculating={budgetLoading} />
-          <MapView itinerary={normalizedItinerary} apiKey={mapKey} />
-        </div>
-      </div>
-    </main>
+    <DashboardPage
+      session={session}
+      onLogout={handleLogout}
+      formData={formData}
+      onChangeForm={setFormData}
+      onGenerate={handleGenerate}
+      loading={loading}
+      history={history}
+      onSelectHistory={handleHistorySelect}
+      error={error}
+      itinerary={normalizedItinerary}
+      budget={budget}
+      onRecalculateBudget={handleRecalculateBudget}
+      budgetLoading={budgetLoading}
+      mapKey={mapKey}
+      configHint={configHint}
+    />
   );
 }
