@@ -80,7 +80,7 @@ export const MapView = ({ itinerary, apiKey }) => {
   if (!apiKey) {
     return (
       <div className="panel muted">
-        <strong>提示：</strong>请输入高德或百度地图 Key 后即可加载地图。
+        <strong>提示：</strong>请在服务器环境变量中配置高德地图 Key 以启用地图展示。
       </div>
     );
   }

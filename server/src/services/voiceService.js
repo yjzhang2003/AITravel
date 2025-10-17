@@ -3,18 +3,15 @@ export const voiceService = {
     const {
       audioBase64,
       mimeType = 'audio/webm',
-      language = 'zh-CN',
-      apiKey,
-      apiUrl,
-      apiKeys
+      language = 'zh-CN'
     } = body ?? {};
 
     if (!audioBase64) {
       return { text: '', error: 'Missing audio payload.' };
     }
 
-    const voiceKey = apiKey ?? apiKeys?.voiceKey ?? process.env.VOICE_API_KEY;
-    const voiceUrl = apiUrl ?? apiKeys?.voiceUrl ?? process.env.VOICE_API_URL;
+    const voiceKey = process.env.VOICE_API_KEY;
+    const voiceUrl = process.env.VOICE_API_URL;
 
     if (!voiceKey || !voiceUrl) {
       return {

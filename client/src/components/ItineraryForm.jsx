@@ -8,7 +8,7 @@ const preferenceOptions = [
   { value: '二次元/动漫', label: '二次元/动漫' }
 ];
 
-export const ItineraryForm = ({ formData, onChange, onSubmit, loading, apiKeys }) => {
+export const ItineraryForm = ({ formData, onChange, onSubmit, loading }) => {
   const handleInputChange = (field) => (event) => {
     onChange({ ...formData, [field]: event.target.value });
   };
@@ -83,7 +83,7 @@ export const ItineraryForm = ({ formData, onChange, onSubmit, loading, apiKeys }
             onChange={handleInputChange('notes')}
           />
         </label>
-        <VoiceInput onTranscript={handleVoiceTranscript} apiKeys={apiKeys} />
+        <VoiceInput onTranscript={handleVoiceTranscript} />
         <button className="primary" type="submit" disabled={loading}>
           {loading ? '生成中...' : '生成行程'}
         </button>

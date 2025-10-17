@@ -6,8 +6,6 @@ import { ItineraryForm } from './components/ItineraryForm.jsx';
 import { ItineraryHistory } from './components/ItineraryHistory.jsx';
 import { ItinerarySummary } from './components/ItinerarySummary.jsx';
 import { MapView } from './components/MapView.jsx';
-import { SettingsPanel } from './components/SettingsPanel.jsx';
-import { useLocalStorage } from './hooks/useLocalStorage.js';
 
 const emptyForm = {
   destination: '',
@@ -28,15 +26,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [apiKeys, setApiKeys] = useLocalStorage('ai-travel/apiKeys', {
-    llmUrl: '',
-    llmKey: '',
-    llmModel: 'gpt-4o-mini',
-    voiceUrl: '',
-    voiceKey: '',
-    mapKey: ''
-  });
   const [configStatus, setConfigStatus] = useState(null);
+  const [mapKey, setMapKey] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -44,6 +35,13 @@ export default function App() {
       .then((res) => res.json())
       .then(setConfigStatus)
       .catch(() => setConfigStatus(null));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/config/map-key')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setMapKey(data.mapKey))
+      .catch(() => setMapKey(null));
   }, []);
 
   useEffect(() => {
@@ -76,12 +74,7 @@ export default function App() {
         },
         body: JSON.stringify({
           ...formData,
-          userId: session?.user?.id,
-          apiKeys: {
-            llmUrl: apiKeys.llmUrl,
-            llmKey: apiKeys.llmKey,
-            llmModel: apiKeys.llmModel
-          }
+          userId: session?.user?.id
         })
       });
 
@@ -193,13 +186,12 @@ export default function App() {
     if (!configStatus) return null;
     const items = [];
     if (!configStatus.supabase) items.push('Supabase 未配置，登录功能暂不可用');
-    if (!apiKeys.llmKey && !configStatus.llm) items.push('大模型 API Key 未配置，默认返回示例数据');
-    if (!apiKeys.mapKey) items.push('地图 Key 未配置，地图无法加载');
-    if (!apiKeys.voiceKey && !configStatus.voice && !configStatus.llm)
-      items.push('语音识别未配置，将使用浏览器语音识别或示例文案');
+    if (!configStatus.llm) items.push('大模型 API Key 未配置，默认返回示例数据');
+    if (!configStatus.map) items.push('地图 Key 未配置，地图无法加载');
+    if (!configStatus.voice) items.push('语音识别未配置，将使用浏览器语音识别或示例文案');
     if (items.length === 0) return null;
     return items.join('；');
-  }, [apiKeys.llmKey, apiKeys.mapKey, apiKeys.voiceKey, configStatus]);
+  }, [configStatus]);
 
   return (
     <main className="layout">
@@ -214,7 +206,6 @@ export default function App() {
       </header>
       <div className="grid">
         <div className="left-column">
-          <SettingsPanel apiKeys={apiKeys} onChange={setApiKeys} />
           <AuthPanel
             session={session}
             onLogin={handleLogin}
@@ -226,7 +217,6 @@ export default function App() {
             onChange={setFormData}
             onSubmit={handleGenerate}
             loading={loading}
-            apiKeys={apiKeys}
           />
           <ItineraryHistory itineraries={history} onSelect={handleHistorySelect} />
         </div>
@@ -234,7 +224,7 @@ export default function App() {
           {error && <div className="panel error">{error}</div>}
           <ItinerarySummary itinerary={normalizedItinerary} />
           <BudgetPanel budget={budget} onRecalculate={handleRecalculateBudget} recalculating={budgetLoading} />
-          <MapView itinerary={normalizedItinerary} apiKey={apiKeys.mapKey} />
+          <MapView itinerary={normalizedItinerary} apiKey={mapKey} />
         </div>
       </div>
     </main>

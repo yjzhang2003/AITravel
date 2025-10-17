@@ -2,9 +2,9 @@ import { buildMockItinerary } from '../utils/mockData.js';
 
 export const llmService = {
   async generateItinerary(request) {
-    const llmKey = request?.apiKeys?.llmKey ?? process.env.LLM_API_KEY;
-    const llmUrl = request?.apiKeys?.llmUrl ?? process.env.LLM_API_URL;
-    const llmModel = request?.apiKeys?.llmModel ?? process.env.LLM_MODEL ?? 'gpt-4o-mini';
+    const llmKey = process.env.LLM_API_KEY;
+    const llmUrl = process.env.LLM_API_URL;
+    const llmModel = process.env.LLM_MODEL ?? 'gpt-4o-mini';
 
     if (!llmKey || !llmUrl) {
       return buildMockItinerary(request);

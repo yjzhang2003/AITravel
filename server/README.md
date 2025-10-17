@@ -15,6 +15,7 @@ npm run dev --workspace=server
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`
 - `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL`
 - `VOICE_API_URL` / `VOICE_API_KEY`
+- `AMAP_API_KEY`
 - `SERVE_CLIENT`（可选，设为 `true` 时会回源托管 `client/dist` 静态文件）
 
 ## Supabase 表结构示例
@@ -41,6 +42,7 @@ npm run dev --workspace=server
 | `POST /api/itineraries/:id/budget` | 重新估算预算（`id` 可传 `preview` 并附带 `itinerary`） |
 | `POST /api/voice/transcribe`   | 语音转文字（需 Base64 音频）|
 | `GET /api/config/status`       | 返回服务配置状态         |
+| `GET /api/config/map-key`      | 返回高德地图 Key（前端运行时动态请求） |
 
 当未配置外部服务时，接口会返回示例数据，方便本地调试。
 

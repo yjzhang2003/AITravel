@@ -12,7 +12,7 @@ npm install
 
 ### 2. 配置环境变量
 
-复制 `server/.env.example` 为 `server/.env`，填入自己的 Supabase、LLM、语音识别、地图等密钥（切记不要将密钥提交至代码库）。
+复制 `server/.env.example` 为 `server/.env`，填入自己的 Supabase、LLM、语音识别、地图等密钥（切记不要将密钥提交至代码库；所有密钥都只保存在服务端）。
 
 ### 3. 启动开发环境
 
@@ -41,13 +41,24 @@ docker run -p 5174:5174 --env-file server/.env ai-travel-planner
 
 工作流会在 push `main` 或手动触发时构建镜像并推送到阿里云镜像仓库。
 
+## 环境变量
+
+在 `server/.env` 中维护所有第三方服务密钥，主要字段包括：
+
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`
+- `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL`
+- `VOICE_API_URL` / `VOICE_API_KEY`（如使用科大讯飞，可填写自建转写服务地址与凭证）
+- `AMAP_API_KEY`（高德 Web JS API Key）
+
+前端会通过受控接口读取必要信息，但不会显示或缓存任何密钥。
+
 ## 关键特性
 
 - ✅ 语音行程需求输入：前端内置浏览器 Web Speech API 方案，并可通过后端代理接入科大讯飞等服务。
 - ✅ 智能行程规划：后端通过可配置的大模型 API 生成行程草案，并在无密钥时自动返回示例数据。
 - ✅ 费用预算管理：支持按行程生成费用估算，并允许在前端手动调整、保存预算方案。
 - ✅ 用户认证与云端数据：集成 Supabase Auth 与数据库表结构示例，可保存多份行程。
-- ✅ 地图为主的交互展示：前端提供高德/百度地图脚本动态加载能力，支持根据行程落点展示地点标记。
+- ✅ 地图为主的交互展示：后端托管高德地图 Key，前端自动加载并依据行程落点展示地点标记。
 - ✅ DevOps 友好：附带 Dockerfile 与 GitHub Actions CI/CD 模板，可将镜像推送到阿里云镜像仓库。
 
 ## 项目结构

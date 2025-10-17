@@ -4,3 +4,5 @@ export const isSupabaseConfigured = () =>
 export const isLLMConfigured = () => Boolean(process.env.LLM_API_URL && process.env.LLM_API_KEY);
 
 export const isVoiceConfigured = () => Boolean(process.env.VOICE_API_URL && process.env.VOICE_API_KEY);
+
+export const isMapConfigured = () => Boolean(process.env.AMAP_API_KEY);

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition.js';
 
-export const VoiceInput = ({ onTranscript, apiKeys }) => {
+export const VoiceInput = ({ onTranscript }) => {
   const [mode, setMode] = useState('webSpeech');
   const [recording, setRecording] = useState(false);
   const [backendError, setBackendError] = useState(null);
@@ -69,11 +69,7 @@ export const VoiceInput = ({ onTranscript, apiKeys }) => {
         },
         body: JSON.stringify({
           audioBase64,
-          mimeType,
-          apiKeys: {
-            voiceKey: apiKeys?.voiceKey,
-            voiceUrl: apiKeys?.voiceUrl
-          }
+          mimeType
         })
       });
 
