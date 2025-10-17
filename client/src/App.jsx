@@ -1,0 +1,242 @@
+import { useEffect, useMemo, useState } from 'react';
+
+import { AuthPanel } from './components/AuthPanel.jsx';
+import { BudgetPanel } from './components/BudgetPanel.jsx';
+import { ItineraryForm } from './components/ItineraryForm.jsx';
+import { ItineraryHistory } from './components/ItineraryHistory.jsx';
+import { ItinerarySummary } from './components/ItinerarySummary.jsx';
+import { MapView } from './components/MapView.jsx';
+import { SettingsPanel } from './components/SettingsPanel.jsx';
+import { useLocalStorage } from './hooks/useLocalStorage.js';
+
+const emptyForm = {
+  destination: '',
+  startDate: '',
+  endDate: '',
+  budget: 10000,
+  companions: 2,
+  preferences: ['美食'],
+  notes: ''
+};
+
+export default function App() {
+  const [formData, setFormData] = useState(emptyForm);
+  const [itinerary, setItinerary] = useState(null);
+  const [budget, setBudget] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [budgetLoading, setBudgetLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [apiKeys, setApiKeys] = useLocalStorage('ai-travel/apiKeys', {
+    llmUrl: '',
+    llmKey: '',
+    llmModel: 'gpt-4o-mini',
+    voiceUrl: '',
+    voiceKey: '',
+    mapKey: ''
+  });
+  const [configStatus, setConfigStatus] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/config/status')
+      .then((res) => res.json())
+      .then(setConfigStatus)
+      .catch(() => setConfigStatus(null));
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchHistory(session.user.id);
+    }
+  }, [session?.user?.id]);
+
+  const fetchHistory = async (userId) => {
+    try {
+      const response = await fetch(`/api/itineraries?userId=${encodeURIComponent(userId)}`);
+      if (!response.ok) {
+        throw new Error('无法获取历史行程');
+      }
+      const data = await response.json();
+      setHistory(data.itineraries ?? []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/itineraries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          userId: session?.user?.id,
+          apiKeys: {
+            llmUrl: apiKeys.llmUrl,
+            llmKey: apiKeys.llmKey,
+            llmModel: apiKeys.llmModel
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '行程生成失败');
+      }
+
+      const data = await response.json();
+      const generated = data.itinerary ?? data;
+      setItinerary(generated.itinerary ?? generated);
+      setBudget(generated.budget ?? null);
+      if (session?.user?.id) {
+        fetchHistory(session.user.id);
+      }
+    } catch (err) {
+      setError(err.message ?? '行程生成失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecalculateBudget = async () => {
+    if (!itinerary) return;
+    setBudgetLoading(true);
+    try {
+      const response = await fetch(`/api/itineraries/${itinerary.id ?? 'preview'}/budget`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          itinerary,
+          overrides: {
+            baseBudget: Number(formData.budget) || undefined,
+            companions: Number(formData.companions) || undefined
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '预算估算失败');
+      }
+
+      const data = await response.json();
+      setBudget(data.budget ?? data);
+    } catch (err) {
+      setError(err.message ?? '预算估算失败');
+    } finally {
+      setBudgetLoading(false);
+    }
+  };
+
+  const handleLogin = async ({ email, password }) => {
+    setAuthLoading(true);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '登录失败');
+      }
+
+      const data = await response.json();
+      setSession(data);
+      return data;
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRegister = async ({ email, password }) => {
+    setAuthLoading(true);
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '注册失败');
+      }
+
+      return response.json();
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleHistorySelect = (item) => {
+    setItinerary(item.itinerary ?? item);
+    setBudget(item.budget ?? null);
+  };
+
+  const normalizedItinerary = useMemo(() => itinerary?.itinerary ?? itinerary, [itinerary]);
+
+  const configHint = useMemo(() => {
+    if (!configStatus) return null;
+    const items = [];
+    if (!configStatus.supabase) items.push('Supabase 未配置，登录功能暂不可用');
+    if (!apiKeys.llmKey && !configStatus.llm) items.push('大模型 API Key 未配置，默认返回示例数据');
+    if (!apiKeys.mapKey) items.push('地图 Key 未配置，地图无法加载');
+    if (!apiKeys.voiceKey && !configStatus.voice && !configStatus.llm)
+      items.push('语音识别未配置，将使用浏览器语音识别或示例文案');
+    if (items.length === 0) return null;
+    return items.join('；');
+  }, [apiKeys.llmKey, apiKeys.mapKey, apiKeys.voiceKey, configStatus]);
+
+  return (
+    <main className="layout">
+      <header className="hero">
+        <div>
+          <h1>AI 旅行规划师</h1>
+          <p>
+            通过语音或文字描述旅行需求，系统自动生成专属行程和预算，并在地图上展示关键地点。
+          </p>
+          {configHint && <p className="muted">{configHint}</p>}
+        </div>
+      </header>
+      <div className="grid">
+        <div className="left-column">
+          <SettingsPanel apiKeys={apiKeys} onChange={setApiKeys} />
+          <AuthPanel
+            session={session}
+            onLogin={handleLogin}
+            onRegister={handleRegister}
+            loading={authLoading}
+          />
+          <ItineraryForm
+            formData={formData}
+            onChange={setFormData}
+            onSubmit={handleGenerate}
+            loading={loading}
+            apiKeys={apiKeys}
+          />
+          <ItineraryHistory itineraries={history} onSelect={handleHistorySelect} />
+        </div>
+        <div className="right-column">
+          {error && <div className="panel error">{error}</div>}
+          <ItinerarySummary itinerary={normalizedItinerary} />
+          <BudgetPanel budget={budget} onRecalculate={handleRecalculateBudget} recalculating={budgetLoading} />
+          <MapView itinerary={normalizedItinerary} apiKey={apiKeys.mapKey} />
+        </div>
+      </div>
+    </main>
+  );
+}

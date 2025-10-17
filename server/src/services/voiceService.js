@@ -1,0 +1,50 @@
+export const voiceService = {
+  async transcribe(body) {
+    const {
+      audioBase64,
+      mimeType = 'audio/webm',
+      language = 'zh-CN',
+      apiKey,
+      apiUrl,
+      apiKeys
+    } = body ?? {};
+
+    if (!audioBase64) {
+      return { text: '', error: 'Missing audio payload.' };
+    }
+
+    const voiceKey = apiKey ?? apiKeys?.voiceKey ?? process.env.VOICE_API_KEY;
+    const voiceUrl = apiUrl ?? apiKeys?.voiceUrl ?? process.env.VOICE_API_URL;
+
+    if (!voiceKey || !voiceUrl) {
+      return {
+        text: body?.mockTranscript ?? '（此处将显示语音识别结果，当前为示例文本）',
+        provider: 'mock'
+      };
+    }
+
+    const response = await fetch(voiceUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${voiceKey}`
+      },
+      body: JSON.stringify({
+        audio: audioBase64,
+        format: mimeType,
+        language
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Voice provider error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    return {
+      text: data?.text ?? '',
+      provider: data?.provider ?? 'custom'
+    };
+  }
+};
