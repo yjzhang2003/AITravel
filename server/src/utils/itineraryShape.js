@@ -7,11 +7,11 @@ export const normalizeItineraryShape = (itinerary, request) => {
 
   const normalized = { ...itinerary };
 
-  normalized.meta = normalizeMetaInfo(normalized.meta ?? normalized.summaryMetadata);
+  const originalSummary = normalized.summary;
+  const metaSource = normalized.meta ?? normalized.summaryMetadata ?? (typeof originalSummary === 'object' ? originalSummary : null);
+  normalized.meta = normalizeMetaInfo(metaSource);
 
-  if (!normalized.summary) {
-    normalized.summary = buildSummaryFromMeta(normalized.meta);
-  }
+  normalized.summary = normalizeSummaryField(originalSummary, normalized.meta);
 
   normalized.destination = normalized.destination ?? normalized.meta?.destination ?? request?.destination ?? '行程概要';
 
@@ -70,6 +70,76 @@ const buildSummaryFromMeta = (meta) => {
   return items.length ? items.join('；') : null;
 };
 
+const normalizeSummaryField = (summary, meta) => {
+  if (summary == null) {
+    return buildSummaryFromMeta(meta) ?? null;
+  }
+
+  if (typeof summary === 'string') {
+    return summary;
+  }
+
+  if (Array.isArray(summary)) {
+    const flattened = summary
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item;
+        }
+        if (item && typeof item === 'object') {
+          return Object.entries(item)
+            .map(([key, value]) => {
+              if (value == null || value === '') return null;
+              const text = typeof value === 'string' ? value : JSON.stringify(value);
+              return `${key}：${text}`;
+            })
+            .filter(Boolean)
+            .join('；');
+        }
+        return JSON.stringify(item);
+      })
+      .filter(Boolean);
+    if (flattened.length) {
+      return flattened.join('；');
+    }
+    return buildSummaryFromMeta(meta) ?? null;
+  }
+
+  if (summary && typeof summary === 'object') {
+    const labelMap = {
+      destination: '目的地',
+      startDate: '开始日期',
+      endDate: '结束日期',
+      travelers: '同行人数',
+      companions: '同行人数',
+      people: '同行人数',
+      budget: '预算参考',
+      budgetCNY: '预算（CNY）',
+      budgetUSD: '预算（USD）',
+      notes: '额外说明',
+      highlights: '亮点',
+      theme: '主题',
+      focus: '重点'
+    };
+
+    const entries = Object.entries(summary)
+      .map(([key, value]) => {
+        if (value == null || value === '') return null;
+        const label = labelMap[key] ?? key;
+        const text = typeof value === 'string' ? value : JSON.stringify(value);
+        return `${label}：${text}`;
+      })
+      .filter(Boolean);
+
+    if (entries.length) {
+      return entries.join('；');
+    }
+
+    return buildSummaryFromMeta(meta) ?? null;
+  }
+
+  return buildSummaryFromMeta(meta) ?? String(summary);
+};
+
 const normalizeDayPlan = (day, index) => {
   if (!day || typeof day !== 'object') {
     return {
@@ -96,14 +166,21 @@ const normalizeHighlight = (highlight, index) => {
     return {
       name: `活动 ${index + 1}`,
       description: null,
-      coordinates: null
+      coordinates: null,
+      category: null
     };
   }
+
+  const coordinates = highlight.coordinates
+    ? highlight.coordinates
+    : highlight.lat && highlight.lng
+      ? { lat: highlight.lat, lng: highlight.lng }
+      : highlight.location ?? null;
 
   return {
     name: highlight.name ?? highlight.title ?? `活动 ${index + 1}`,
     description: highlight.description ?? highlight.detail ?? null,
-    coordinates: highlight.coordinates ?? highlight.location ?? null,
+    coordinates,
     category: highlight.category ?? highlight.type ?? null
   };
 };
@@ -120,7 +197,8 @@ const normalizeHotel = (hotel) => {
   return {
     name: hotel.name ?? hotel.title ?? '推荐酒店',
     location: hotel.location ?? hotel.address ?? null,
-    pricePerNight: hotel.pricePerNight ?? hotel.price ?? null
+    pricePerNight: hotel.pricePerNight ?? hotel.price ?? hotel.priceRange ?? null,
+    highlights: hotel.highlights ?? hotel.features ?? null
   };
 };
 

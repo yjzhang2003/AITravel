@@ -2,27 +2,15 @@ const renderSummary = (summary) => {
   if (!summary) return null;
 
   if (typeof summary === 'string') {
-    return <p>{summary}</p>;
+    return summary
+      .split(/；|;|\n/)
+      .filter(Boolean)
+      .map((line, index) => (
+        <p key={index}>{line.trim()}</p>
+      ));
   }
 
-  if (Array.isArray(summary)) {
-    return (
-      <ul>
-        {summary.map((item, index) => (
-          <li key={index}>{typeof item === 'string' ? item : JSON.stringify(item)}</li>
-        ))}
-      </ul>
-    );
-  }
-
-  if (typeof summary === 'object') {
-    const text = Object.values(summary)
-      .map((value) => (typeof value === 'string' ? value : JSON.stringify(value)))
-      .join('；');
-    return <p>{text}</p>;
-  }
-
-  return <p>{String(summary)}</p>;
+  return null;
 };
 
 const safeText = (value) => {
