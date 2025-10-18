@@ -54,6 +54,7 @@ create index if not exists idx_itineraries_user_id on public.itineraries(user_id
 | `POST /api/auth/login`         | 登录，返回 `session`     |
 | `GET /api/itineraries`         | 查询历史行程（需 `userId`）|
 | `POST /api/itineraries`        | 根据请求生成新行程       |
+| `POST /api/itineraries/chat/converse` | LLM 驱动的对话采集需求并返回回复/行程 |
 | `POST /api/itineraries/:id/budget` | 重新估算预算（`id` 可传 `preview` 并附带 `itinerary`） |
 | `POST /api/voice/transcribe`   | 语音转文字（需 Base64 音频）|
 | `GET /api/config/status`       | 返回服务配置状态         |

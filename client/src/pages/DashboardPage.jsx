@@ -1,5 +1,5 @@
 import { BudgetPanel } from '../components/BudgetPanel.jsx';
-import { ItineraryForm } from '../components/ItineraryForm.jsx';
+import { ChatPlanner } from '../components/ChatPlanner.jsx';
 import { ItineraryHistory } from '../components/ItineraryHistory.jsx';
 import { ItinerarySummary } from '../components/ItinerarySummary.jsx';
 import { MapView } from '../components/MapView.jsx';
@@ -7,10 +7,10 @@ import { MapView } from '../components/MapView.jsx';
 export const DashboardPage = ({
   session,
   onLogout,
-  formData,
-  onChangeForm,
-  onGenerate,
-  loading,
+  chatMessages,
+  onChatSend,
+  onChatReset,
+  chatLoading,
   history,
   onSelectHistory,
   error,
@@ -19,7 +19,10 @@ export const DashboardPage = ({
   onRecalculateBudget,
   budgetLoading,
   mapKey,
-  configHint
+  configHint,
+  onSaveItinerary,
+  canSaveItinerary,
+  savingItinerary
 }) => {
   const userEmail = session?.user?.email ?? '体验模式';
 
@@ -40,11 +43,21 @@ export const DashboardPage = ({
       {configHint && <div className="banner muted">{configHint}</div>}
       <div className="grid">
         <div className="left-column">
-          <ItineraryForm formData={formData} onChange={onChangeForm} onSubmit={onGenerate} loading={loading} />
+          <ChatPlanner messages={chatMessages} onSend={onChatSend} onReset={onChatReset} loading={chatLoading} />
           <ItineraryHistory itineraries={history} onSelect={onSelectHistory} />
         </div>
         <div className="right-column">
           {error && <div className="panel error">{error}</div>}
+          {itinerary && canSaveItinerary && (
+            <button
+              className="secondary"
+              type="button"
+              onClick={onSaveItinerary}
+              disabled={savingItinerary || chatLoading}
+            >
+              {savingItinerary ? '保存中...' : '保存当前行程'}
+            </button>
+          )}
           <ItinerarySummary itinerary={itinerary} />
           <BudgetPanel budget={budget} onRecalculate={onRecalculateBudget} recalculating={budgetLoading} />
           <MapView itinerary={itinerary} apiKey={mapKey} />

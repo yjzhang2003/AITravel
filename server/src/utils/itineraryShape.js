@@ -125,7 +125,14 @@ const normalizeSummaryField = (summary, meta) => {
       .map(([key, value]) => {
         if (value == null || value === '') return null;
         const label = labelMap[key] ?? key;
-        const text = typeof value === 'string' ? value : JSON.stringify(value);
+        let text;
+        if (typeof value === 'string') {
+          text = value;
+        } else if (Array.isArray(value)) {
+          text = value.join('、');
+        } else {
+          text = JSON.stringify(value);
+        }
         return `${label}：${text}`;
       })
       .filter(Boolean);

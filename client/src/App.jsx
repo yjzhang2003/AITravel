@@ -3,26 +3,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { AuthPage } from './pages/AuthPage.jsx';
 import { DashboardPage } from './pages/DashboardPage.jsx';
 
-const emptyForm = {
-  destination: '',
-  startDate: '',
-  endDate: '',
-  budget: 10000,
-  companions: 2,
-  preferences: ['美食'],
-  notes: ''
+const initialAssistantMessage = {
+  role: 'assistant',
+  content: '你好，我是你的 AI 旅行顾问。告诉我想去哪里、什么时候出发，我会一步步帮你制定行程！'
 };
 
 export default function App() {
-  const [formData, setFormData] = useState(emptyForm);
+  const [chatMessages, setChatMessages] = useState([initialAssistantMessage]);
+  const [chatLoading, setChatLoading] = useState(false);
   const [itinerary, setItinerary] = useState(null);
   const [budget, setBudget] = useState(null);
   const [history, setHistory] = useState([]);
+  const [currentRequest, setCurrentRequest] = useState({});
   const [session, setSession] = useState(null);
   const [guestMode, setGuestMode] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [savingItinerary, setSavingItinerary] = useState(false);
   const [configStatus, setConfigStatus] = useState(null);
   const [mapKey, setMapKey] = useState(null);
   const [error, setError] = useState('');
@@ -62,40 +59,6 @@ export default function App() {
     }
   };
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await fetch('/api/itineraries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...formData,
-          userId: session?.user?.id
-        })
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || '行程生成失败');
-      }
-
-      const data = await response.json();
-      const generated = data.itinerary ?? data;
-      setItinerary(generated.itinerary ?? generated);
-      setBudget(generated.budget ?? null);
-      if (session?.user?.id) {
-        fetchHistory(session.user.id);
-      }
-    } catch (err) {
-      setError(err.message ?? '行程生成失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRecalculateBudget = async () => {
     if (!itinerary) return;
     setBudgetLoading(true);
@@ -108,8 +71,8 @@ export default function App() {
         body: JSON.stringify({
           itinerary,
           overrides: {
-            baseBudget: Number(formData.budget) || undefined,
-            companions: Number(formData.companions) || undefined
+            baseBudget: Number(currentRequest.budget) || undefined,
+            companions: Number(currentRequest.companions ?? currentRequest.travelers) || undefined
           }
         })
       });
@@ -178,6 +141,9 @@ export default function App() {
   const handleHistorySelect = (item) => {
     setItinerary(item.itinerary ?? item);
     setBudget(item.budget ?? null);
+    if (item.request) {
+      setCurrentRequest(item.request);
+    }
   };
 
   const normalizedItinerary = useMemo(() => itinerary?.itinerary ?? itinerary, [itinerary]);
@@ -199,7 +165,104 @@ export default function App() {
     setHistory([]);
     setItinerary(null);
     setBudget(null);
-    setFormData(emptyForm);
+    setCurrentRequest({});
+    setChatMessages([initialAssistantMessage]);
+    setError('');
+  };
+
+  const handleChatSend = async (text) => {
+    const newHistory = [...chatMessages, { role: 'user', content: text }];
+    setChatMessages(newHistory);
+    setChatLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/itineraries/chat/converse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: newHistory,
+          userContext: {
+            destination: currentRequest.destination
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const textBody = await response.text();
+        throw new Error(textBody || '对话失败，请稍后再试');
+      }
+
+      const data = await response.json();
+      setChatMessages((prev) => [...newHistory, { role: 'assistant', content: data.reply ?? '' }]);
+
+      if (data.itineraryRequest) {
+        setCurrentRequest((prev) => ({ ...prev, ...data.itineraryRequest }));
+      }
+
+      if (data.itinerary) {
+        setItinerary(data.itinerary);
+        setBudget(data.budget ?? null);
+      }
+    } catch (err) {
+      setError(err.message ?? '对话出现问题，请稍后重试');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleChatReset = () => {
+    setChatMessages([initialAssistantMessage]);
+    setItinerary(null);
+    setBudget(null);
+    setCurrentRequest({});
+    setError('');
+  };
+
+  const handleSaveItinerary = async () => {
+    if (!session?.user?.id) {
+      setError('登录后才能保存行程。');
+      return;
+    }
+
+    if (!currentRequest.destination) {
+      setError('当前行程缺少目的地信息，暂无法保存。');
+      return;
+    }
+
+    setSavingItinerary(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/itineraries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...currentRequest,
+          userId: session?.user?.id
+        })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '保存行程失败');
+      }
+
+      const data = await response.json();
+      const generated = data.itinerary ?? data;
+      setItinerary(generated.itinerary ?? generated);
+      setBudget(generated.budget ?? null);
+      if (session?.user?.id) {
+        fetchHistory(session.user.id);
+      }
+    } catch (err) {
+      setError(err.message ?? '保存失败，请稍后重试');
+    } finally {
+      setSavingItinerary(false);
+    }
   };
 
   if (!session && !guestMode) {
@@ -218,10 +281,10 @@ export default function App() {
     <DashboardPage
       session={session}
       onLogout={handleLogout}
-      formData={formData}
-      onChangeForm={setFormData}
-      onGenerate={handleGenerate}
-      loading={loading}
+      chatMessages={chatMessages}
+      onChatSend={handleChatSend}
+      onChatReset={handleChatReset}
+      chatLoading={chatLoading}
       history={history}
       onSelectHistory={handleHistorySelect}
       error={error}
@@ -231,6 +294,9 @@ export default function App() {
       budgetLoading={budgetLoading}
       mapKey={mapKey}
       configHint={configHint}
+      onSaveItinerary={handleSaveItinerary}
+      canSaveItinerary={Boolean(session?.user?.id && normalizedItinerary && Object.keys(currentRequest).length > 0)}
+      savingItinerary={savingItinerary}
     />
   );
 }

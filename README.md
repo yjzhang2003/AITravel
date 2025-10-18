@@ -71,6 +71,7 @@ create index if not exists idx_itineraries_user_id on public.itineraries(user_id
 
 ## 关键特性
 
+- ✅ LLM 聊天式需求采集：前端提供 AI 对话框，智能引导用户补充需求并实时生成行程。
 - ✅ 语音行程需求输入：前端内置浏览器 Web Speech API 方案，并可通过后端代理接入科大讯飞等服务。
 - ✅ 智能行程规划：后端通过可配置的大模型 API 生成行程草案，并在无密钥时自动返回示例数据。
 - ✅ 费用预算管理：支持按行程生成费用估算，并允许在前端手动调整、保存预算方案。
