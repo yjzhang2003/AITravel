@@ -65,7 +65,7 @@ export const DashboardPage = ({
               {savingItinerary ? '保存中...' : '保存当前行程'}
             </button>
           )}
-          <ItinerarySummary itinerary={itinerary} onChange={onItineraryChange} />
+          <ItinerarySummary itinerary={itinerary} onChange={onItineraryChange} mapApiKey={mapKey} />
           <BudgetPanel budget={budget} onRecalculate={onRecalculateBudget} recalculating={budgetLoading} />
           <MapView itinerary={itinerary} apiKey={mapKey} />
         </div>

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { loadAmap } from '../utils/mapLoader.js';
 
 const safeText = (value) => {
   if (value === null || value === undefined) return '';
@@ -125,6 +127,12 @@ const sanitizeItineraryDraft = (draft) => {
         nextHighlight.coordinates = null;
       }
 
+      Object.keys(nextHighlight)
+        .filter((key) => key.startsWith('__'))
+        .forEach((key) => {
+          delete nextHighlight[key];
+        });
+
       return nextHighlight;
     });
 
@@ -171,7 +179,7 @@ const sanitizeItineraryDraft = (draft) => {
   return result;
 };
 
-export const ItinerarySummary = ({ itinerary, onChange }) => {
+export const ItinerarySummary = ({ itinerary, onChange, mapApiKey }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(null);
 
@@ -240,7 +248,7 @@ export const ItinerarySummary = ({ itinerary, onChange }) => {
         )}
       </div>
       {isEditing ? (
-        <ItineraryEditor draft={draft} setDraft={setDraft} />
+        <ItineraryEditor draft={draft} setDraft={setDraft} mapApiKey={mapApiKey} />
       ) : (
         <ItineraryView itinerary={itinerary} />
       )}
@@ -328,7 +336,162 @@ const ItineraryView = ({ itinerary }) => (
   </>
 );
 
-const ItineraryEditor = ({ draft, setDraft }) => {
+const ItineraryEditor = ({ draft, setDraft, mapApiKey }) => {
+  const geocoderRef = useRef(null);
+  const geocoderPromiseRef = useRef(null);
+  const mapSupported = Boolean(mapApiKey);
+
+  const getGeocoder = useCallback(async () => {
+    if (!mapSupported) {
+      throw new Error('未配置地图 Key');
+    }
+    if (geocoderRef.current) {
+      return geocoderRef.current;
+    }
+    if (!geocoderPromiseRef.current) {
+      geocoderPromiseRef.current = loadAmap(mapApiKey)
+        .then(
+          (AMap) =>
+            new Promise((resolve, reject) => {
+              AMap.plugin('AMap.Geocoder', () => {
+                try {
+                  const instance = new AMap.Geocoder();
+                  geocoderRef.current = instance;
+                  resolve(instance);
+                } catch (error) {
+                  geocoderRef.current = null;
+                  geocoderPromiseRef.current = null;
+                  reject(error);
+                }
+              });
+            })
+        )
+        .catch((error) => {
+          geocoderPromiseRef.current = null;
+          throw error;
+        });
+    }
+    return geocoderPromiseRef.current;
+  }, [mapApiKey, mapSupported]);
+
+  const setHighlight = useCallback(
+    (dayIndex, highlightIndex, updater) => {
+      setDraft((prev) => {
+        if (!prev) return prev;
+        const plans = ensureArray(prev.dailyPlans);
+        const nextPlans = plans.map((day, idx) => {
+          if (idx !== dayIndex) return day;
+          const highlights = ensureArray(day.highlights);
+          const nextHighlights = highlights.map((highlight, hIdx) => {
+            if (hIdx !== highlightIndex) return highlight;
+            return updater({ ...highlight });
+          });
+          return { ...day, highlights: nextHighlights };
+        });
+        return { ...prev, dailyPlans: nextPlans };
+      });
+    },
+    [setDraft]
+  );
+
+  const geocodeHighlight = useCallback(
+    async (dayIndex, highlightIndex, keyword) => {
+      if (!mapSupported) return;
+      const query = (keyword ?? '').trim();
+      if (!query) return;
+
+      setHighlight(dayIndex, highlightIndex, (highlight) => ({
+        ...highlight,
+        coordinates: null,
+        __geocodeStatus: 'loading',
+        __geocodeMessage: null,
+        __geocodeQuery: query
+      }));
+
+      try {
+        const geocoder = await getGeocoder();
+        const geocode = await new Promise((resolve, reject) => {
+          geocoder.getLocation(query, (status, result) => {
+            if (status === 'complete' && result?.geocodes?.length) {
+              resolve(result.geocodes[0]);
+            } else {
+              reject(new Error(result?.info ?? '未找到匹配地点'));
+            }
+          });
+        });
+
+        const { location } = geocode ?? {};
+        const lng = Number(location?.lng);
+        const lat = Number(location?.lat);
+        const coordinates =
+          Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
+
+        setHighlight(dayIndex, highlightIndex, (highlight) => {
+          if (highlight.__geocodeQuery && highlight.__geocodeQuery !== query) {
+            return highlight;
+          }
+          return {
+            ...highlight,
+            coordinates,
+            __geocodeStatus: coordinates ? 'success' : 'error',
+            __geocodeMessage: coordinates ? null : '未找到匹配地点，请尝试更精确的名称。',
+            __geocodeQuery: coordinates ? query : undefined
+          };
+        });
+      } catch (error) {
+        const message = error?.message ?? '未找到匹配地点，请尝试更精确的名称。';
+        setHighlight(dayIndex, highlightIndex, (highlight) => {
+          if (highlight.__geocodeQuery && highlight.__geocodeQuery !== query) {
+            return highlight;
+          }
+          return {
+            ...highlight,
+            coordinates: null,
+            __geocodeStatus: 'error',
+            __geocodeMessage: message,
+            __geocodeQuery: query
+          };
+        });
+      }
+    },
+    [getGeocoder, mapSupported, setHighlight]
+  );
+
+  const getGeocodeMessage = useCallback(
+    (status, coordinates, fallbackMessage) => {
+      const lng = Number(coordinates?.lng);
+      const lat = Number(coordinates?.lat);
+
+      if (!mapSupported) {
+        if (Number.isFinite(lng) && Number.isFinite(lat)) {
+          return `当前坐标：${lng.toFixed(4)}, ${lat.toFixed(4)}（需配置地图 Key 以重新定位）`;
+        }
+        return '配置地图 Key 后可自动获取地点坐标。';
+      }
+
+      if (status === 'loading') {
+        return '自动定位中...';
+      }
+      if (status === 'success') {
+        if (Number.isFinite(lng) && Number.isFinite(lat)) {
+          return `已定位：${lng.toFixed(4)}, ${lat.toFixed(4)}`;
+        }
+        return '已定位成功。';
+      }
+      if (status === 'error') {
+        return fallbackMessage ?? '未找到匹配地点，请尝试更精确的名称。';
+      }
+      if (status === 'pending') {
+        return '名称已更新，请点击“定位”获取最新位置。';
+      }
+      if (Number.isFinite(lng) && Number.isFinite(lat)) {
+        return `已定位：${lng.toFixed(4)}, ${lat.toFixed(4)}`;
+      }
+      return '输入景点名称后，系统会自动尝试定位。';
+    },
+    [mapSupported]
+  );
+
   if (!draft) return null;
 
   const meta = draft.meta ?? {};
@@ -440,24 +603,20 @@ const ItineraryEditor = ({ draft, setDraft }) => {
   };
 
   const updateHighlightField = (dayIndex, highlightIndex, field, value) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const plans = ensureArray(prev.dailyPlans);
-      const nextPlans = plans.map((day, idx) => {
-        if (idx !== dayIndex) return day;
-        const highlights = ensureArray(day.highlights);
-        const nextHighlights = highlights.map((highlight, hIdx) => {
-          if (hIdx !== highlightIndex) return highlight;
-          if (field === 'lat' || field === 'lng') {
-            const coords = { ...(highlight.coordinates ?? {}) };
-            coords[field] = value;
-            return { ...highlight, coordinates: coords };
-          }
-          return { ...highlight, [field]: value };
-        });
-        return { ...day, highlights: nextHighlights };
-      });
-      return { ...prev, dailyPlans: nextPlans };
+    setHighlight(dayIndex, highlightIndex, (highlight) => {
+      const nextHighlight = { ...highlight, [field]: value };
+      if (field === 'name') {
+        const trimmed = String(value ?? '').trim();
+        nextHighlight.coordinates = null;
+        nextHighlight.__geocodeMessage = null;
+        nextHighlight.__geocodeQuery = undefined;
+        if (mapSupported && trimmed) {
+          nextHighlight.__geocodeStatus = 'pending';
+        } else {
+          delete nextHighlight.__geocodeStatus;
+        }
+      }
+      return nextHighlight;
     });
   };
 
@@ -684,69 +843,76 @@ const ItineraryEditor = ({ draft, setDraft }) => {
                 </button>
               </div>
               {ensureArray(day.highlights).length === 0 && <p className="muted">为当日添加游览或体验活动。</p>}
-              {ensureArray(day.highlights).map((highlight, highlightIndex) => (
-                <div key={highlightIndex} className="editor-highlight">
-                  <div className="editor-grid">
-                    <label>
-                      <span>名称</span>
-                      <input
-                        value={highlight?.name ?? ''}
+              {ensureArray(day.highlights).map((highlight, highlightIndex) => {
+                const status =
+                  highlight?.__geocodeStatus ??
+                  (highlight?.coordinates ? 'success' : undefined);
+                const coordinates = highlight?.coordinates ?? null;
+                const statusClass = status ?? (coordinates ? 'success' : 'idle');
+                const geocodeMessage = getGeocodeMessage(status, coordinates, highlight?.__geocodeMessage);
+                const geocodeLabel =
+                  status === 'loading'
+                    ? '定位中...'
+                    : coordinates
+                      ? '重新定位'
+                      : '定位';
+
+                return (
+                  <div key={highlightIndex} className="editor-highlight">
+                    <div className="editor-grid">
+                      <label>
+                        <span>名称</span>
+                        <input
+                          value={highlight?.name ?? ''}
+                          onChange={(event) =>
+                            updateHighlightField(dayIndex, highlightIndex, 'name', event.target.value)
+                          }
+                          onBlur={(event) => geocodeHighlight(dayIndex, highlightIndex, event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        <span>类别</span>
+                        <input
+                          value={highlight?.category ?? ''}
+                          onChange={(event) =>
+                            updateHighlightField(dayIndex, highlightIndex, 'category', event.target.value)
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="geocode-feedback">
+                      <p className={`geocode-status ${statusClass}`}>{geocodeMessage}</p>
+                      {mapSupported && (
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => geocodeHighlight(dayIndex, highlightIndex, highlight?.name)}
+                          disabled={status === 'loading'}
+                        >
+                          {geocodeLabel}
+                        </button>
+                      )}
+                    </div>
+                    <label className="editor-textarea">
+                      <span>描述</span>
+                      <textarea
+                        rows={2}
+                        value={highlight?.description ?? ''}
                         onChange={(event) =>
-                          updateHighlightField(dayIndex, highlightIndex, 'name', event.target.value)
+                          updateHighlightField(dayIndex, highlightIndex, 'description', event.target.value)
                         }
                       />
                     </label>
-                    <label>
-                      <span>类别</span>
-                      <input
-                        value={highlight?.category ?? ''}
-                        onChange={(event) =>
-                          updateHighlightField(dayIndex, highlightIndex, 'category', event.target.value)
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>经度</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={highlight?.coordinates?.lng ?? ''}
-                        onChange={(event) =>
-                          updateHighlightField(dayIndex, highlightIndex, 'lng', event.target.value)
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>纬度</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={highlight?.coordinates?.lat ?? ''}
-                        onChange={(event) =>
-                          updateHighlightField(dayIndex, highlightIndex, 'lat', event.target.value)
-                        }
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      className="text-button danger"
+                      onClick={() => removeHighlight(dayIndex, highlightIndex)}
+                    >
+                      删除活动
+                    </button>
                   </div>
-                  <label className="editor-textarea">
-                    <span>描述</span>
-                    <textarea
-                      rows={2}
-                      value={highlight?.description ?? ''}
-                      onChange={(event) =>
-                        updateHighlightField(dayIndex, highlightIndex, 'description', event.target.value)
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="text-button danger"
-                    onClick={() => removeHighlight(dayIndex, highlightIndex)}
-                  >
-                    删除活动
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </article>
         ))}

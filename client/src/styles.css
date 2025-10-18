@@ -580,6 +580,39 @@ select {
   background: rgba(248, 250, 252, 0.7);
 }
 
+.geocode-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.geocode-feedback .text-button {
+  white-space: nowrap;
+}
+
+.geocode-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.geocode-status.success {
+  color: #15803d;
+}
+
+.geocode-status.error {
+  color: #dc2626;
+}
+
+.geocode-status.loading {
+  color: #2563eb;
+}
+
+.geocode-status.pending {
+  color: #f97316;
+}
+
 .text-button.danger {
   color: #dc2626;
 }
