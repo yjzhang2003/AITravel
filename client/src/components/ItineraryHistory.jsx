@@ -17,7 +17,13 @@ export const ItineraryHistory = ({ itineraries, onSelect }) => {
           <li key={item.id}>
             <button type="button" className="ghost" onClick={() => onSelect(item)}>
               <div>
-                <strong>{item.itinerary?.destination ?? item.destination}</strong>
+                <strong>
+                  {item.itinerary?.destination ??
+                    item.itinerary?.meta?.destination ??
+                    item.request?.destination ??
+                    item.destination ??
+                    '行程'}
+                </strong>
                 <small className="muted">{new Date(item.created_at ?? item.createdAt).toLocaleString()}</small>
               </div>
             </button>

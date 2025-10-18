@@ -1,8 +1,11 @@
-import JSON5 from 'json5';
-
 import '../config/env.js';
 
 import { buildMockItinerary } from '../utils/mockData.js';
+import { normalizeLLMItinerary } from './llmNormalizer.js';
+import { normalizeItineraryShape } from '../utils/itineraryShape.js';
+
+let lastRawItinerary = null;
+export const getLastRawItinerary = () => lastRawItinerary;
 
 export const llmService = {
   async generateItinerary(request) {
@@ -48,7 +51,9 @@ export const llmService = {
     }
 
     const data = await response.json();
-    return normalizeLLMResponse(data, request);
+    const normalized = normalizeLLMResponse(data, request);
+    lastRawItinerary = data;
+    return normalized;
   }
 };
 
@@ -69,33 +74,8 @@ ${noteText}
 };
 
 const normalizeLLMResponse = (data, request) => {
-  if (data?.itinerary) {
-    return data.itinerary;
-  }
-
-  const content = extractContentText(data);
-
-  if (!content) {
-    return buildMockItinerary(request);
-  }
-
-  const parsed = parseItineraryFromText(content);
-
-  if (parsed) {
-    return parsed;
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch (error) {
-    try {
-      return JSON5.parse(content);
-    } catch (errorJSON5) {
-      // eslint-disable-next-line no-console
-      console.warn('LLM response parse failed, falling back to mock itinerary.', errorJSON5);
-      return buildMockItinerary(request);
-    }
-  }
+  const itinerary = normalizeLLMItinerary(data, request);
+  return normalizeItineraryShape(itinerary, request);
 };
 
 const buildMessages = (request) => {
@@ -111,102 +91,4 @@ const buildMessages = (request) => {
       content: prompt
     }
   ];
-};
-
-const extractContentText = (data) => {
-  if (!data) return null;
-
-  if (Array.isArray(data.output_text) && data.output_text.length > 0) {
-    return data.output_text.join('\n');
-  }
-
-  if (Array.isArray(data.output)) {
-    const segments = data.output
-      .map((item) => {
-        if (typeof item === 'string') return item;
-        if (Array.isArray(item?.content)) {
-          return item.content
-            .map((segment) => segment?.text ?? segment?.value ?? '')
-            .filter(Boolean)
-            .join('\n');
-        }
-        if (typeof item?.content === 'string') {
-          return item.content;
-        }
-        return '';
-      })
-      .filter(Boolean);
-
-    if (segments.length) {
-      return segments.join('\n');
-    }
-  }
-
-  return data?.choices?.[0]?.message?.content ?? null;
-};
-
-const parseItineraryFromText = (rawText) => {
-  if (!rawText) return null;
-
-  const candidates = [];
-  const trimmed = rawText.trim();
-
-  const fencedMatch = trimmed.match(/```json([\s\S]*?)```/i);
-  if (fencedMatch?.[1]) {
-    candidates.push(fencedMatch[1]);
-  }
-
-  const braceMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (braceMatch) {
-    candidates.push(braceMatch[0]);
-  }
-
-  const balanced = findFirstBalancedJson(trimmed);
-  if (balanced) {
-    candidates.push(balanced);
-  }
-
-  candidates.push(trimmed);
-
-  for (const candidate of candidates) {
-    const text = candidate.trim();
-    if (!text) continue;
-
-    try {
-      return JSON.parse(text);
-    } catch (error) {
-      try {
-        return JSON5.parse(text);
-      } catch (errorJSON5) {
-        // continue
-      }
-    }
-  }
-
-  return null;
-};
-
-const findFirstBalancedJson = (text) => {
-  let depth = 0;
-  let start = -1;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-
-    if (char === '{') {
-      if (depth === 0) {
-        start = i;
-      }
-      depth += 1;
-    }
-
-    if (char === '}') {
-      depth -= 1;
-      if (depth === 0 && start !== -1) {
-        return text.slice(start, i + 1);
-      }
-    }
-  }
-
-  return null;
 };
