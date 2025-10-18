@@ -454,6 +454,146 @@ select {
   transform: translateY(-1px);
 }
 
+.itinerary-editing .panel-header {
+  align-items: center;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.itinerary-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.92));
+}
+
+.editor-section h3 {
+  margin: 0;
+}
+
+.editor-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.itinerary-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.itinerary-editor input,
+.itinerary-editor textarea {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #cbd5f5;
+  background: #fff;
+  font: inherit;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.itinerary-editor input:focus,
+.itinerary-editor textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.editor-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.editor-textarea textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.editor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.65);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.editor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  background: #ffffff;
+  box-shadow: 0 18px 40px -32px rgba(15, 23, 42, 0.35);
+}
+
+.editor-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor-subsection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-highlight {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.text-button.danger {
+  color: #dc2626;
+}
+
+.text-button.danger:hover {
+  color: #b91c1c;
+}
+
+.day-description {
+  display: block;
+  margin-top: 6px;
+  color: #475569;
+  font-size: 0.9rem;
+}
 
 .hotel-highlights {
   margin: 6px 0 0 0;

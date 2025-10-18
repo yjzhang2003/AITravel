@@ -1,6 +1,5 @@
 import '../config/env.js';
 
-import { normalizeLLMItinerary } from './llmNormalizer.js';
 import { normalizeItineraryShape } from '../utils/itineraryShape.js';
 import { llmService } from './llmService.js';
 import { budgetService } from './budgetService.js';

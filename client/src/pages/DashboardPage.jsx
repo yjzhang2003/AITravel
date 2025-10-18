@@ -23,7 +23,8 @@ export const DashboardPage = ({
   configHint,
   onSaveItinerary,
   canSaveItinerary,
-  savingItinerary
+  savingItinerary,
+  onItineraryChange
 }) => {
   const userEmail = session?.user?.email ?? '体验模式';
 
@@ -64,7 +65,7 @@ export const DashboardPage = ({
               {savingItinerary ? '保存中...' : '保存当前行程'}
             </button>
           )}
-          <ItinerarySummary itinerary={itinerary} />
+          <ItinerarySummary itinerary={itinerary} onChange={onItineraryChange} />
           <BudgetPanel budget={budget} onRecalculate={onRecalculateBudget} recalculating={budgetLoading} />
           <MapView itinerary={itinerary} apiKey={mapKey} />
         </div>

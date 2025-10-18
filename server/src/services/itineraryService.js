@@ -1,8 +1,11 @@
+import crypto from 'crypto';
+
 import { supabaseAdminClient } from './supabaseClient.js';
 import { llmService } from './llmService.js';
 import { budgetService } from './budgetService.js';
 import { buildMockItinerary } from '../utils/mockData.js';
 import { isSupabaseConfigured } from '../utils/config.js';
+import { normalizeItineraryShape } from '../utils/itineraryShape.js';
 
 export const itineraryService = {
   async list({ userId }) {
@@ -38,14 +41,27 @@ export const itineraryService = {
   },
 
   async create(payload) {
-    const itinerary = await llmService.generateItinerary(payload);
+    const { itinerary: rawItinerary, userId, ...request } = payload ?? {};
+    const requestPayload = { ...request };
 
-    const budget = budgetService.calculate(itinerary, { baseBudget: payload.budget });
+    let itinerary;
+    if (rawItinerary && Object.keys(rawItinerary).length > 0) {
+      itinerary = normalizeItineraryShape(rawItinerary, requestPayload);
+    } else {
+      itinerary = await llmService.generateItinerary(requestPayload);
+    }
+
+    const itineraryId = itinerary?.id ?? crypto.randomUUID();
+    if (!itinerary?.id) {
+      itinerary = { ...itinerary, id: itineraryId };
+    }
+
+    const budget = budgetService.calculate(itinerary, { baseBudget: requestPayload.budget ?? payload?.budget });
 
     const record = {
-      id: itinerary.id,
-      user_id: payload.userId ?? null,
-      request: payload,
+      id: itineraryId,
+      user_id: userId ?? null,
+      request: userId ? { ...requestPayload, userId } : requestPayload,
       itinerary,
       budget,
       created_at: new Date().toISOString()

@@ -24,6 +24,28 @@ export default function App() {
   const [mapKey, setMapKey] = useState(null);
   const [error, setError] = useState('');
 
+  const deriveRequestFromItinerary = (plan) => {
+    if (!plan || typeof plan !== 'object') return {};
+
+    const next = {};
+    if (plan.destination) {
+      next.destination = plan.destination;
+    }
+
+    if (plan.meta && typeof plan.meta === 'object') {
+      const { destination: metaDestination, startDate, endDate, travelers, companions, budget, notes } = plan.meta;
+      if (metaDestination) next.destination = metaDestination;
+      if (startDate) next.startDate = startDate;
+      if (endDate) next.endDate = endDate;
+      if (travelers != null) next.travelers = travelers;
+      if (companions != null) next.companions = companions;
+      if (budget != null) next.budget = budget;
+      if (notes) next.notes = notes;
+    }
+
+    return next;
+  };
+
   useEffect(() => {
     fetch('/api/config/status')
       .then((res) => res.json())
@@ -242,9 +264,20 @@ export default function App() {
     setError('');
   };
 
+  const handleItineraryUpdate = (updatedItinerary) => {
+    if (!updatedItinerary) return;
+    setItinerary(updatedItinerary);
+    setCurrentRequest((prev) => ({ ...prev, ...deriveRequestFromItinerary(updatedItinerary) }));
+  };
+
   const handleSaveItinerary = async () => {
     if (!session?.user?.id) {
       setError('登录后才能保存行程。');
+      return;
+    }
+
+    if (!normalizedItinerary) {
+      setError('当前没有可保存的行程。');
       return;
     }
 
@@ -264,6 +297,7 @@ export default function App() {
         },
         body: JSON.stringify({
           ...currentRequest,
+          itinerary: normalizedItinerary,
           userId: session?.user?.id
         })
       });
@@ -320,6 +354,7 @@ export default function App() {
       onSaveItinerary={handleSaveItinerary}
       canSaveItinerary={Boolean(session?.user?.id && normalizedItinerary && Object.keys(currentRequest).length > 0)}
       savingItinerary={savingItinerary}
+      onItineraryChange={handleItineraryUpdate}
     />
   );
 }
