@@ -10,7 +10,6 @@ export const DashboardPage = ({
   chatMessages,
   onChatSend,
   onChatReset,
-  onChatVoice,
   chatLoading,
   history,
   onSelectHistory,
@@ -48,7 +47,6 @@ export const DashboardPage = ({
             messages={chatMessages}
             onSend={onChatSend}
             onReset={onChatReset}
-            onVoice={onChatVoice}
             loading={chatLoading}
           />
           <ItineraryHistory itineraries={history} onSelect={onSelectHistory} />
