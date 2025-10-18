@@ -8,10 +8,12 @@ export const normalizeItineraryShape = (itinerary, request) => {
   const normalized = { ...itinerary };
 
   const originalSummary = normalized.summary;
-  const metaSource = normalized.meta ?? normalized.summaryMetadata ?? (typeof originalSummary === 'object' ? originalSummary : null);
+  const metaSource =
+    normalized.meta ?? normalized.summaryMetadata ?? (typeof originalSummary === 'object' ? originalSummary : null);
   normalized.meta = normalizeMetaInfo(metaSource);
-
-  normalized.summary = normalizeSummaryField(originalSummary, normalized.meta);
+  const { extras } = extractSummaryExtras(originalSummary, normalized.meta);
+  normalized.summaryExtras = extras;
+  normalized.summary = null;
 
   normalized.destination = normalized.destination ?? normalized.meta?.destination ?? request?.destination ?? '行程概要';
 
@@ -25,7 +27,7 @@ export const normalizeItineraryShape = (itinerary, request) => {
 
   normalized.transportationTips = Array.isArray(normalized.transportationTips)
     ? normalized.transportationTips.map((tip) => (typeof tip === 'string' ? tip : JSON.stringify(tip)))
-    : [];
+    : normalizeTransportationTips(normalized.transportationTips);
 
   return normalized;
 };
@@ -55,96 +57,83 @@ const normalizeMetaInfo = (meta) => {
   };
 };
 
-const buildSummaryFromMeta = (meta) => {
-  if (!meta) return null;
-
-  const items = [];
-
-  if (meta.destination) items.push(`目的地：${meta.destination}`);
-  if (meta.startDate) items.push(`开始日期：${meta.startDate}`);
-  if (meta.endDate) items.push(`结束日期：${meta.endDate}`);
-  if (meta.travelers) items.push(`同行人数：${meta.travelers}`);
-  if (meta.budget) items.push(`预算参考：${meta.budget}`);
-  if (meta.notes) items.push(`额外说明：${meta.notes}`);
-
-  return items.length ? items.join('；') : null;
-};
-
-const normalizeSummaryField = (summary, meta) => {
+const extractSummaryExtras = (summary, meta) => {
+  const extras = [];
   if (summary == null) {
-    return buildSummaryFromMeta(meta) ?? null;
+    return { extras };
   }
 
   if (typeof summary === 'string') {
-    return summary;
+    extras.push({ label: '摘要', value: summary });
+    return { extras };
   }
 
   if (Array.isArray(summary)) {
-    const flattened = summary
-      .map((item) => {
-        if (typeof item === 'string') {
-          return item;
-        }
-        if (item && typeof item === 'object') {
-          return Object.entries(item)
-            .map(([key, value]) => {
-              if (value == null || value === '') return null;
-              const text = typeof value === 'string' ? value : JSON.stringify(value);
-              return `${key}：${text}`;
-            })
-            .filter(Boolean)
-            .join('；');
-        }
-        return JSON.stringify(item);
-      })
-      .filter(Boolean);
-    if (flattened.length) {
-      return flattened.join('；');
+    const joined = summary
+      .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .filter(Boolean)
+      .join('；');
+    if (joined) {
+      extras.push({ label: '摘要', value: joined });
     }
-    return buildSummaryFromMeta(meta) ?? null;
+    return { extras };
   }
 
   if (summary && typeof summary === 'object') {
     const labelMap = {
-      destination: '目的地',
-      startDate: '开始日期',
-      endDate: '结束日期',
-      travelers: '同行人数',
-      companions: '同行人数',
-      people: '同行人数',
-      budget: '预算参考',
-      budgetCNY: '预算（CNY）',
-      budgetUSD: '预算（USD）',
+      preferences: '偏好',
+      transportation: '交通方式',
       notes: '额外说明',
-      highlights: '亮点',
+      focus: '重点',
       theme: '主题',
-      focus: '重点'
+      highlights: '亮点',
+      goals: '出行目标'
     };
 
-    const entries = Object.entries(summary)
-      .map(([key, value]) => {
-        if (value == null || value === '') return null;
-        const label = labelMap[key] ?? key;
-        let text;
-        if (typeof value === 'string') {
-          text = value;
-        } else if (Array.isArray(value)) {
-          text = value.join('、');
+    Object.entries(summary).forEach(([key, value]) => {
+      if (value == null || value === '') return;
+
+      const normalizedKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      const metaField =
+        normalizedKey.includes('destination')
+          ? 'destination'
+          : normalizedKey.includes('start')
+            ? 'startDate'
+            : normalizedKey.includes('end')
+              ? 'endDate'
+              : normalizedKey.includes('traveler') || normalizedKey.includes('companion') || normalizedKey.includes('people')
+                ? 'travelers'
+                : normalizedKey.includes('budget')
+                  ? 'budget'
+                  : normalizedKey === 'notes'
+                    ? 'notes'
+                    : null;
+
+      if (metaField && meta && meta[metaField]) {
+        return;
+      }
+
+      const label = labelMap[key] ?? key;
+      let text;
+      if (Array.isArray(value)) {
+        text = value.map((item) => (typeof item === 'string' ? item : JSON.stringify(item))).join('、');
+      } else if (typeof value === 'object') {
+        if (key === 'transportationTips') {
+          text = Object.entries(value)
+            .map(([k, v]) => `${k}：${v}`)
+            .join('；');
         } else {
           text = JSON.stringify(value);
         }
-        return `${label}：${text}`;
-      })
-      .filter(Boolean);
+      } else {
+        text = String(value);
+      }
 
-    if (entries.length) {
-      return entries.join('；');
-    }
-
-    return buildSummaryFromMeta(meta) ?? null;
+      extras.push({ label, value: text });
+    });
   }
 
-  return buildSummaryFromMeta(meta) ?? String(summary);
+  return { extras };
 };
 
 const normalizeDayPlan = (day, index) => {
@@ -182,13 +171,15 @@ const normalizeHighlight = (highlight, index) => {
     ? highlight.coordinates
     : highlight.lat && highlight.lng
       ? { lat: highlight.lat, lng: highlight.lng }
-      : highlight.location ?? null;
+      : Array.isArray(highlight['经纬度']) && highlight['经纬度'].length === 2
+        ? { lng: highlight['经纬度'][0], lat: highlight['经纬度'][1] }
+        : highlight.location ?? null;
 
   return {
-    name: highlight.name ?? highlight.title ?? `活动 ${index + 1}`,
-    description: highlight.description ?? highlight.detail ?? null,
+    name: highlight.name ?? highlight.title ?? highlight['地点'] ?? `活动 ${index + 1}`,
+    description: highlight.description ?? highlight.detail ?? highlight['描述'] ?? null,
     coordinates,
-    category: highlight.category ?? highlight.type ?? null
+    category: highlight.category ?? highlight.type ?? highlight['类别'] ?? null
   };
 };
 
@@ -205,8 +196,17 @@ const normalizeHotel = (hotel) => {
     name: hotel.name ?? hotel.title ?? '推荐酒店',
     location: hotel.location ?? hotel.address ?? null,
     pricePerNight: hotel.pricePerNight ?? hotel.price ?? hotel.priceRange ?? null,
-    highlights: hotel.highlights ?? hotel.features ?? null
+    highlights: hotel.highlights ?? hotel.features ?? hotel.pros ?? null
   };
 };
 
 const buildFallback = (request) => buildMockItinerary(request ?? {});
+
+const normalizeTransportationTips = (tips) => {
+  if (!tips || typeof tips !== 'object') {
+    return [];
+  }
+  return Object.entries(tips)
+    .map(([key, value]) => `${key}：${value}`)
+    .filter(Boolean);
+};

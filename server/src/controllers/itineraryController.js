@@ -32,5 +32,17 @@ export const itineraryController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async remove(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { userId } = req.query;
+
+      await itineraryService.remove({ itineraryId: id, userId });
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
   }
 };

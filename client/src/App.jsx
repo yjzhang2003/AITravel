@@ -146,6 +146,28 @@ export default function App() {
     }
   };
 
+  const handleHistoryDelete = async (item) => {
+    if (!item?.id) return;
+    try {
+      const response = await fetch(`/api/itineraries/${item.id}?userId=${encodeURIComponent(session?.user?.id ?? '')}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || '删除行程失败');
+      }
+
+      setHistory((prev) => prev.filter((historyItem) => historyItem.id !== item.id));
+      if (itinerary?.id === item.id) {
+        setItinerary(null);
+        setBudget(null);
+      }
+    } catch (err) {
+      setError(err.message ?? '删除行程失败，请稍后重试');
+    }
+  };
+
   const normalizedItinerary = useMemo(() => itinerary?.itinerary ?? itinerary, [itinerary]);
 
   const configHint = useMemo(() => {
@@ -287,6 +309,7 @@ export default function App() {
       chatLoading={chatLoading}
       history={history}
       onSelectHistory={handleHistorySelect}
+      onDeleteHistory={handleHistoryDelete}
       error={error}
       itinerary={normalizedItinerary}
       budget={budget}

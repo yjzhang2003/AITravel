@@ -208,21 +208,6 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
   );
 };
 
-const blobToBase64 = (blob) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        resolve(result.split(',')[1]);
-      } else {
-        reject(new Error('无法读取音频数据'));
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-
 const encodeBlobToPCM = async (blob) => {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();

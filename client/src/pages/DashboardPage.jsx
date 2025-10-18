@@ -13,6 +13,7 @@ export const DashboardPage = ({
   chatLoading,
   history,
   onSelectHistory,
+  onDeleteHistory,
   error,
   itinerary,
   budget,
@@ -49,7 +50,7 @@ export const DashboardPage = ({
             onReset={onChatReset}
             loading={chatLoading}
           />
-          <ItineraryHistory itineraries={history} onSelect={onSelectHistory} />
+          <ItineraryHistory itineraries={history} onSelect={onSelectHistory} onDelete={onDeleteHistory} />
         </div>
         <div className="right-column">
           {error && <div className="panel error">{error}</div>}

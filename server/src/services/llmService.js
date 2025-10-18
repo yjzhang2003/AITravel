@@ -59,18 +59,54 @@ export const llmService = {
 
 const buildPrompt = ({ destination, startDate, endDate, budget, companions, preferences, notes }) => {
   const preferenceText = (preferences ?? []).join('、') || '综合体验';
-  const noteText = notes ? `补充说明：${notes}` : '';
-  return `请基于以下需求输出结构化 JSON 行程安排：
-目的地：${destination}
-开始日期：${startDate ?? '待定'}
-结束日期：${endDate ?? '待定'}
-预算（人民币）：${budget ?? '未提供'}
-同行人：${companions ?? '未提供'}
-偏好：${preferenceText}
+  const noteText = notes ? `补充说明：${notes}` : '补充说明：无';
 
-${noteText}
+  return `请扮演专业旅行策划师，仅输出一个 JSON 对象（不要包含额外解释或多余字段），严格遵循下列结构与键名：
+{
+  "summary": {
+    "destination": "城市或地区名",
+    "startDate": "出发日期（若为相对时间，可写如“后天”）",
+    "endDate": "返程日期或结束时间",
+    "budget": 预算数字（单位人民币）, 
+    "travelers": 同行人数,
+    "preferences": ["偏好标签"],
+    "transportation": "往返交通方式"
+  },
+  "dailyPlans": [
+    {
+      "day": 天数数字,
+      "theme": "当天主题",
+      "highlights": [
+        {
+          "name": "地点名称",
+          "description": "简洁描述",
+          "category": "类别",
+          "lat": 纬度数字,
+          "lng": 经度数字
+        }
+      ]
+    }
+  ],
+  "recommendedHotels": [
+    {
+      "name": "酒店名称",
+      "location": "所在位置",
+      "pricePerNight": 每晚预算（数字）, 
+      "highlights": ["该酒店的优点"]
+    }
+  ],
+  "transportationTips": ["交通建议（每条字符串）"]
+}
+必须保持字段名与上述完全一致；纬度/经度缺失时使用 null；若某项信息缺省，可使用 null 或空数组。请使用中文描述。
 
-输出字段包括：summary, dailyPlans (数组，包含 day, theme, highlights[地点、描述、经纬度、类别]), recommendedHotels, transportationTips。`;
+待生成行程需求：
+- 目的地：${destination}
+- 出发日期：${startDate ?? '待定'}
+- 结束日期：${endDate ?? '待定'}
+- 预算（人民币）：${budget ?? '未提供'}
+- 同行人数：${companions ?? '未提供'}
+- 偏好：${preferenceText}
+- ${noteText}`;
 };
 
 const normalizeLLMResponse = (data, request) => {
@@ -84,7 +120,7 @@ const buildMessages = (request) => {
     {
       role: 'system',
       content:
-        '你是一个旅行策划专家，需要基于用户需求输出 JSON 格式的行程规划。请严格按照用户要求返回 summary、dailyPlans、recommendedHotels、transportationTips 等字段。'
+        '你是专业旅行策划助手。务必仅输出一个 JSON 对象，不要添加额外说明。字段必须与示例结构完全一致：summary/dailyPlans/recommendedHotels/transportationTips。地点描述、主题等使用中文。缺失信息以 null 或空数组表示。纬度使用 "lat"，经度使用 "lng"，均为数字。'
     },
     {
       role: 'user',

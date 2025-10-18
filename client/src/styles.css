@@ -366,6 +366,16 @@ select {
   margin: 8px 0 0;
 }
 
+.summary-extras {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+}
+
+.summary-extras strong {
+  color: #1e293b;
+}
+
 .budget-list {
   list-style: none;
   padding: 0;
@@ -389,6 +399,31 @@ select {
   padding: 0;
   display: grid;
   gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-delete {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.history-delete:hover {
+  text-decoration: underline;
+}
+
+.hotel-highlights {
+  margin: 6px 0 0 0;
+  padding-left: 18px;
+  color: #475569;
 }
 
 @media (max-width: 960px) {

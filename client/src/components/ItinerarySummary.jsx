@@ -1,18 +1,3 @@
-const renderSummary = (summary) => {
-  if (!summary) return null;
-
-  if (typeof summary === 'string') {
-    return summary
-      .split(/；|;|\n/)
-      .filter(Boolean)
-      .map((line, index) => (
-        <p key={index}>{line.trim()}</p>
-      ));
-  }
-
-  return null;
-};
-
 const safeText = (value) => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
@@ -44,7 +29,16 @@ export const ItinerarySummary = ({ itinerary }) => {
           {itinerary.meta.budget && `预算：${safeText(itinerary.meta.budget)}`}
         </p>
       )}
-      {renderSummary(itinerary.summary)}
+      {Array.isArray(itinerary.summaryExtras) && itinerary.summaryExtras.length > 0 && (
+        <div className="summary-extras">
+          {itinerary.summaryExtras.map((item, index) => (
+            <p key={index}>
+              <strong>{item.label}：</strong>
+              <span>{item.value}</span>
+            </p>
+          ))}
+        </div>
+      )}
       <div className="daily-plan-list">
         {(itinerary.dailyPlans ?? []).map((day, dayIndex) => (
           <article key={day?.day ?? dayIndex} className="daily-plan-card">
@@ -78,6 +72,13 @@ export const ItinerarySummary = ({ itinerary }) => {
                 <strong>{safeText(hotel?.name ?? `选项 ${index + 1}`)}</strong>
                 {hotel?.location && <> · {safeText(hotel.location)}</>}
                 {hotel?.pricePerNight && <> · ¥{safeText(hotel.pricePerNight)}/晚</>}
+                {Array.isArray(hotel?.highlights) && hotel.highlights.length > 0 && (
+                  <ul className="hotel-highlights">
+                    {hotel.highlights.map((point, subIndex) => (
+                      <li key={subIndex}>{safeText(point)}</li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

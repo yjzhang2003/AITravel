@@ -116,6 +116,36 @@ export const itineraryService = {
     }
 
     return budgetService.calculate(currentItinerary, overrides);
+  },
+
+  async remove({ itineraryId, userId }) {
+    if (!itineraryId) {
+      return false;
+    }
+
+    if (!isSupabaseConfigured() || !supabaseAdminClient) {
+      return true;
+    }
+
+    try {
+      let query = supabaseAdminClient.from('itineraries').delete().eq('id', itineraryId);
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        if (isMissingItinerariesTable(error)) {
+          return true;
+        }
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      throw new Error(`Supabase delete itinerary failed: ${error.message}`);
+    }
   }
 };
 

@@ -9,5 +9,6 @@ router.get('/', itineraryController.list);
 router.post('/', itineraryController.create);
 router.post('/chat/converse', chatController.converse);
 router.post('/:id/budget', itineraryController.calculateBudget);
+router.delete('/:id', itineraryController.remove);
 
 export default router;

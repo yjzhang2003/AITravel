@@ -1,4 +1,4 @@
-export const ItineraryHistory = ({ itineraries, onSelect }) => {
+export const ItineraryHistory = ({ itineraries, onSelect, onDelete }) => {
   if (!itineraries?.length) {
     return (
       <section className="panel muted">
@@ -14,7 +14,8 @@ export const ItineraryHistory = ({ itineraries, onSelect }) => {
       </div>
       <ul className="history-list">
         {itineraries.map((item) => (
-          <li key={item.id}>
+          <li key={item.id ?? `${item.destination}-${item.created_at}`}
+            className="history-item">
             <button type="button" className="ghost" onClick={() => onSelect(item)}>
               <div>
                 <strong>
@@ -27,6 +28,18 @@ export const ItineraryHistory = ({ itineraries, onSelect }) => {
                 <small className="muted">{new Date(item.created_at ?? item.createdAt).toLocaleString()}</small>
               </div>
             </button>
+            {onDelete && item.id && (
+              <button
+                type="button"
+                className="history-delete"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(item);
+                }}
+              >
+                删除
+              </button>
+            )}
           </li>
         ))}
       </ul>
