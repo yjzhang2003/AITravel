@@ -52,6 +52,23 @@ docker run -p 5174:5174 --env-file server/.env ai-travel-planner
 
 前端会通过受控接口读取必要信息，但不会显示或缓存任何密钥。
 
+如果需要在 Supabase 中持久化行程数据，请提前创建 `itineraries` 表，例如：
+
+```sql
+create table if not exists public.itineraries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete cascade,
+  request jsonb,
+  itinerary jsonb,
+  budget jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_itineraries_user_id on public.itineraries(user_id);
+```
+
+若表未创建，后端会自动回退到示例数据，但不会写入 Supabase。
+
 ## 关键特性
 
 - ✅ 语音行程需求输入：前端内置浏览器 Web Speech API 方案，并可通过后端代理接入科大讯飞等服务。

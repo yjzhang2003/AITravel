@@ -31,6 +31,21 @@ npm run dev --workspace=server
 | budget     | jsonb     | 预算估算             |
 | created_at | timestamptz | 默认 `now()`        |
 
+```sql
+create table if not exists public.itineraries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete cascade,
+  request jsonb,
+  itinerary jsonb,
+  budget jsonb,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_itineraries_user_id on public.itineraries(user_id);
+```
+
+若表不存在，接口会退回示例数据且不会在 Supabase 中落库。
+
 ## API 概览
 
 | Method & Path                  | 描述                     |

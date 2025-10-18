@@ -17,17 +17,24 @@ export const itineraryService = {
       return [buildMockItinerary({ destination: '东京', companions: 3, budget: 12000 })];
     }
 
-    const { data, error } = await supabaseAdminClient
-      .from('itineraries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabaseAdminClient
+        .from('itineraries')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (error) {
+        if (isMissingItinerariesTable(error)) {
+          return [buildMockItinerary({ destination: '东京', companions: 3, budget: 12000 })];
+        }
+        throw error;
+      }
+
+      return data ?? [];
+    } catch (error) {
       throw new Error(`Supabase list itineraries failed: ${error.message}`);
     }
-
-    return data ?? [];
   },
 
   async create(payload) {
@@ -48,43 +55,60 @@ export const itineraryService = {
       return record;
     }
 
-    const { data, error } = await supabaseAdminClient
-      .from('itineraries')
-      .insert(record)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabaseAdminClient
+        .from('itineraries')
+        .insert(record)
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        if (isMissingItinerariesTable(error)) {
+          return record;
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
       throw new Error(`Supabase create itinerary failed: ${error.message}`);
     }
-
-    return data;
   },
 
   async calculateBudget({ itineraryId, overrides, itinerary }) {
     let currentItinerary = itinerary;
 
     if (!currentItinerary && isSupabaseConfigured() && supabaseAdminClient && itineraryId) {
-      const { data, error } = await supabaseAdminClient
-        .from('itineraries')
-        .select('*')
-        .eq('id', itineraryId)
-        .single();
+      try {
+        const { data, error } = await supabaseAdminClient
+          .from('itineraries')
+          .select('*')
+          .eq('id', itineraryId)
+          .single();
 
-      if (error) {
-        throw new Error(`Supabase fetch itinerary failed: ${error.message}`);
+        if (error) {
+          if (isMissingItinerariesTable(error)) {
+            currentItinerary = buildMockItinerary({});
+          } else {
+            throw error;
+          }
+        } else {
+          currentItinerary = data?.itinerary;
+
+          const newBudget = budgetService.calculate(currentItinerary, overrides);
+
+          await supabaseAdminClient
+            .from('itineraries')
+            .update({ budget: newBudget })
+            .eq('id', itineraryId);
+
+          return newBudget;
+        }
+      } catch (error) {
+        if (!isMissingItinerariesTable(error)) {
+          throw new Error(`Supabase fetch itinerary failed: ${error.message}`);
+        }
       }
-
-      currentItinerary = data?.itinerary;
-
-      const newBudget = budgetService.calculate(currentItinerary, overrides);
-
-      await supabaseAdminClient
-        .from('itineraries')
-        .update({ budget: newBudget })
-        .eq('id', itineraryId);
-
-      return newBudget;
     }
 
     if (!currentItinerary) {
@@ -93,4 +117,20 @@ export const itineraryService = {
 
     return budgetService.calculate(currentItinerary, overrides);
   }
+};
+
+const isMissingItinerariesTable = (error) => {
+  if (!error) return false;
+
+  const message = String(error?.message ?? '').toLowerCase();
+  const code = error?.code;
+
+  return (
+    message.includes('could not find the table') ||
+    message.includes('relation "public.itineraries" does not exist') ||
+    message.includes('schema cache') ||
+    code === 'PGRST301' ||
+    code === 'PGRST305' ||
+    code === '42P01'
+  );
 };
