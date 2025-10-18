@@ -10,6 +10,7 @@ export const DashboardPage = ({
   chatMessages,
   onChatSend,
   onChatReset,
+  onChatVoice,
   chatLoading,
   history,
   onSelectHistory,
@@ -43,7 +44,13 @@ export const DashboardPage = ({
       {configHint && <div className="banner muted">{configHint}</div>}
       <div className="grid">
         <div className="left-column">
-          <ChatPlanner messages={chatMessages} onSend={onChatSend} onReset={onChatReset} loading={chatLoading} />
+          <ChatPlanner
+            messages={chatMessages}
+            onSend={onChatSend}
+            onReset={onChatReset}
+            onVoice={onChatVoice}
+            loading={chatLoading}
+          />
           <ItineraryHistory itineraries={history} onSelect={onSelectHistory} />
         </div>
         <div className="right-column">

@@ -284,6 +284,7 @@ export default function App() {
       chatMessages={chatMessages}
       onChatSend={handleChatSend}
       onChatReset={handleChatReset}
+      onChatVoice={() => setError('语音输入暂未接入，请先使用文字描述。')}
       chatLoading={chatLoading}
       history={history}
       onSelectHistory={handleHistorySelect}
