@@ -79,7 +79,7 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
     chunksRef.current = [];
     setVoiceLoading(true);
     try {
-      const base64 = await blobToBase64(blob);
+      const { base64, format } = await encodeBlobToPCM(blob);
       const response = await fetch('/api/voice/transcribe', {
         method: 'POST',
         headers: {
@@ -87,7 +87,7 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
         },
         body: JSON.stringify({
           audioBase64: base64,
-          mimeType: blob.type || 'audio/webm',
+          mimeType: format,
           language: 'zh-CN'
         })
       });
@@ -222,3 +222,68 @@ const blobToBase64 = (blob) =>
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+
+const encodeBlobToPCM = async (blob) => {
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContext();
+  const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const sampleRate = 16000;
+  const duration = decodedBuffer.duration;
+  const offlineContext = new OfflineAudioContext(1, Math.ceil(duration * sampleRate), sampleRate);
+
+  const monoBuffer = offlineContext.createBuffer(1, decodedBuffer.length, decodedBuffer.sampleRate);
+  const monoData = monoBuffer.getChannelData(0);
+  const channelData = decodedBuffer.getChannelData(0);
+
+  if (decodedBuffer.numberOfChannels === 1) {
+    monoData.set(channelData);
+  } else {
+    const tmp = new Float32Array(decodedBuffer.length);
+    for (let channel = 0; channel < decodedBuffer.numberOfChannels; channel += 1) {
+      const data = decodedBuffer.getChannelData(channel);
+      for (let i = 0; i < decodedBuffer.length; i += 1) {
+        tmp[i] += data[i];
+      }
+    }
+    for (let i = 0; i < tmp.length; i += 1) {
+      monoData[i] = tmp[i] / decodedBuffer.numberOfChannels;
+    }
+  }
+
+  const source = offlineContext.createBufferSource();
+  source.buffer = monoBuffer;
+  source.connect(offlineContext.destination);
+  source.start(0);
+  const renderedBuffer = await offlineContext.startRendering();
+
+  audioContext.close();
+
+  const pcmData = renderedBuffer.getChannelData(0);
+  const pcm16 = floatTo16BitPCM(pcmData);
+  const base64 = arrayBufferToBase64(pcm16.buffer);
+
+  return {
+    base64,
+    format: 'audio/L16;rate=16000'
+  };
+};
+
+const floatTo16BitPCM = (float32Array) => {
+  const output = new Int16Array(float32Array.length);
+  for (let i = 0; i < float32Array.length; i += 1) {
+    const s = Math.max(-1, Math.min(1, float32Array[i]));
+    output[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return output;
+};
+
+const arrayBufferToBase64 = (buffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk);
+  }
+  return btoa(binary);
+};
