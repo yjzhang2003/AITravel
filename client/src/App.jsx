@@ -309,7 +309,7 @@ export default function App() {
       chatLoading={chatLoading}
       history={history}
       onSelectHistory={handleHistorySelect}
-      onDeleteHistory={handleHistoryDelete}
+      onDeleteHistory={session?.user?.id ? handleHistoryDelete : null}
       error={error}
       itinerary={normalizedItinerary}
       budget={budget}

@@ -14,10 +14,9 @@ export const ItineraryHistory = ({ itineraries, onSelect, onDelete }) => {
       </div>
       <ul className="history-list">
         {itineraries.map((item) => (
-          <li key={item.id ?? `${item.destination}-${item.created_at}`}
-            className="history-item">
-            <button type="button" className="ghost" onClick={() => onSelect(item)}>
-              <div>
+          <li key={item.id ?? `${item.destination}-${item.created_at}`} className="history-item">
+            <button type="button" className="history-entry" onClick={() => onSelect(item)}>
+              <div className="history-entry-text">
                 <strong>
                   {item.itinerary?.destination ??
                     item.itinerary?.meta?.destination ??
@@ -31,13 +30,14 @@ export const ItineraryHistory = ({ itineraries, onSelect, onDelete }) => {
             {onDelete && item.id && (
               <button
                 type="button"
+                aria-label="删除行程"
                 className="history-delete"
                 onClick={(event) => {
                   event.stopPropagation();
                   onDelete(item);
                 }}
               >
-                删除
+                ×
               </button>
             )}
           </li>

@@ -406,19 +406,54 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: rgba(248, 250, 252, 0.95);
+  border-radius: 18px;
+  padding: 10px 10px 10px 10px;
+}
+
+.history-entry {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.history-entry:hover {
+  background: rgba(226, 232, 240, 0.6);
+  box-shadow: 0 10px 25px -18px rgba(30, 64, 175, 0.45);
+}
+
+.history-entry-text {
+  display: grid;
+  gap: 4px;
 }
 
 .history-delete {
   border: none;
-  background: transparent;
-  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .history-delete:hover {
-  text-decoration: underline;
+  background: rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
 }
+
 
 .hotel-highlights {
   margin: 6px 0 0 0;
