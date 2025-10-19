@@ -93,7 +93,7 @@ export const MapView = ({ itinerary, apiKey, onRouteSearch, searchingRoute = fal
         <span>行程地图</span>
       </div>
 
-      <form className="route-search" onSubmit={handleRouteSubmit}>
+      {/* <form className="route-search" onSubmit={handleRouteSubmit}>
         <div className="route-search-fields">
           <label>
             <span>起点</span>
@@ -117,7 +117,7 @@ export const MapView = ({ itinerary, apiKey, onRouteSearch, searchingRoute = fal
         <button className="secondary" type="submit" disabled={searchingRoute || !originInput.trim() || !destinationInput.trim()}>
           {searchingRoute ? '规划中...' : '搜索路线'}
         </button>
-      </form>
+      </form> */}
 
       {!apiKey && (
         <div className="map-placeholder muted">

@@ -333,7 +333,7 @@ const ItineraryView = ({ itinerary, routes }) => (
         </ul>
       </div>
     )}
-    {Array.isArray(routes) && routes.length > 0 && (
+    {/* {Array.isArray(routes) && routes.length > 0 && (
       <div className="section">
         <h3>最新路线规划</h3>
         <ul className="route-list">
@@ -368,7 +368,7 @@ const ItineraryView = ({ itinerary, routes }) => (
           ))}
         </ul>
       </div>
-    )}
+    )} */}
   </>
 );
 
