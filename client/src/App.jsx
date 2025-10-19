@@ -280,6 +280,11 @@ export default function App() {
     if (!updatedItinerary) return;
     setItinerary(updatedItinerary);
     setCurrentRequest((prev) => ({ ...prev, ...deriveRequestFromItinerary(updatedItinerary) }));
+    if (updatedItinerary.id) {
+      setHistory((prev) =>
+        prev.map((item) => (item.id === updatedItinerary.id ? { ...item, itinerary: updatedItinerary } : item))
+      );
+    }
   };
 
   const handleSaveItinerary = async () => {
@@ -319,13 +324,25 @@ export default function App() {
         throw new Error(text || '保存行程失败');
       }
 
-      const data = await response.json();
-      const generated = data.itinerary ?? data;
-      setItinerary(generated.itinerary ?? generated);
-      setBudget(generated.budget ?? null);
-      if (session?.user?.id) {
-        fetchHistory(session.user.id);
-      }
+      const savedItem = await response.json();
+      // The API returns the canonical history item, which may be a new item or an update.
+      // Update the currently displayed itinerary and budget from this new source of truth.
+      setItinerary(savedItem.itinerary ?? savedItem);
+      setBudget(savedItem.budget ?? null);
+
+      // Optimistically update the history list to reflect the change without a full refetch.
+      setHistory((prev) => {
+        const existingIndex = prev.findIndex((item) => item.id === savedItem.id);
+        if (existingIndex > -1) {
+          // This was an update to an existing item, so replace it in the list.
+          const newHistory = [...prev];
+          newHistory[existingIndex] = savedItem;
+          return newHistory;
+        } else {
+          // This was a new item, so add it to the list.
+          return [...prev, savedItem];
+        }
+      });
     } catch (err) {
       setError(err.message ?? '保存失败，请稍后重试');
     } finally {
