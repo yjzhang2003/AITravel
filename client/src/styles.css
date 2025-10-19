@@ -851,3 +851,42 @@ select {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  padding: 0;
+  max-width: none;
+}
+
+.app-top-bar {
+  flex-shrink: 0;
+  margin: 16px 16px 0;
+}
+
+.dashboard-grid-container {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 40% 60%;
+  overflow: hidden;
+  gap: 16px;
+  padding: 16px;
+}
+
+.left-column,
+.right-column {
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.chat-planner {
+  flex-grow: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.chat-window {
+  flex-grow: 1;
+}

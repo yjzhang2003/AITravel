@@ -132,7 +132,7 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
           重新开始
         </button>
       </div>
-      <div className="chat-window" role="log" aria-live="polite">
+      <div className="chat-messages" role="log" aria-live="polite">
         {messages.map((message, index) => (
           <div key={index} className={message.role === 'assistant' ? 'chat-bubble assistant' : 'chat-bubble user'}>
             <span>{message.content}</span>

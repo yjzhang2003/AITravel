@@ -44,7 +44,7 @@ export const DashboardPage = ({
         </div>
       </header>
       {configHint && <div className="banner muted">{configHint}</div>}
-      <div className="grid">
+      <div className="grid dashboard-grid-container">
         <div className="left-column">
           <ChatPlanner
             messages={chatMessages}
