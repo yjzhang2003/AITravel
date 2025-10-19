@@ -58,7 +58,8 @@ export const llmService = {
 };
 
 const buildPrompt = ({ destination, startDate, endDate, budget, companions, preferences, notes }) => {
-  const preferenceText = (preferences ?? []).join('、') || '综合体验';
+  const preferenceList = normalizePreferencesInput(preferences);
+  const preferenceText = preferenceList.length > 0 ? preferenceList.join('、') : '综合体验';
   const noteText = notes ? `补充说明：${notes}` : '补充说明：无';
 
   return `请扮演专业旅行策划师，仅输出一个 JSON 对象（不要包含额外解释或多余字段），严格遵循下列结构与键名：
@@ -112,6 +113,49 @@ const buildPrompt = ({ destination, startDate, endDate, budget, companions, pref
 const normalizeLLMResponse = (data, request) => {
   const itinerary = normalizeLLMItinerary(data, request);
   return normalizeItineraryShape(itinerary, request);
+};
+
+const normalizePreferencesInput = (value) => {
+  if (value == null) return [];
+
+  const fromString = (text) =>
+    String(text)
+      .split(/[,，；;、\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => fromString(item));
+  }
+
+  if (typeof value === 'string') {
+    return fromString(value);
+  }
+
+  if (typeof value === 'object') {
+    const results = [];
+    Object.entries(value).forEach(([key, val]) => {
+      if (val == null) return;
+      if (typeof val === 'boolean') {
+        if (val) results.push(key.trim());
+        return;
+      }
+      if (Array.isArray(val)) {
+        results.push(...val.flatMap((item) => fromString(item)));
+        return;
+      }
+      if (typeof val === 'string') {
+        results.push(...fromString(val));
+        return;
+      }
+      if (typeof val === 'object') {
+        results.push(...normalizePreferencesInput(val));
+      }
+    });
+    return results.filter(Boolean);
+  }
+
+  return [];
 };
 
 const buildMessages = (request) => {

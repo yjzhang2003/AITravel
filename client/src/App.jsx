@@ -23,6 +23,7 @@ export default function App() {
   const [configStatus, setConfigStatus] = useState(null);
   const [mapKey, setMapKey] = useState(null);
   const [error, setError] = useState('');
+  const [routes, setRoutes] = useState([]);
 
   const deriveRequestFromItinerary = (plan) => {
     if (!plan || typeof plan !== 'object') return {};
@@ -229,7 +230,11 @@ export default function App() {
           messages: newHistory,
           userContext: {
             destination: currentRequest.destination
-          }
+          },
+          itinerary: normalizedItinerary,
+          itineraryRequest: currentRequest,
+          userId: session?.user?.id ?? null,
+          itineraryId: normalizedItinerary?.id ?? null
         })
       });
 
@@ -249,6 +254,12 @@ export default function App() {
         setItinerary(data.itinerary);
         setBudget(data.budget ?? null);
       }
+
+      if (Array.isArray(data.routes)) {
+        setRoutes(data.routes);
+      } else {
+        setRoutes([]);
+      }
     } catch (err) {
       setError(err.message ?? '对话出现问题，请稍后重试');
     } finally {
@@ -262,6 +273,7 @@ export default function App() {
     setBudget(null);
     setCurrentRequest({});
     setError('');
+    setRoutes([]);
   };
 
   const handleItineraryUpdate = (updatedItinerary) => {
@@ -355,6 +367,7 @@ export default function App() {
       canSaveItinerary={Boolean(session?.user?.id && normalizedItinerary && Object.keys(currentRequest).length > 0)}
       savingItinerary={savingItinerary}
       onItineraryChange={handleItineraryUpdate}
+      routes={routes}
     />
   );
 }

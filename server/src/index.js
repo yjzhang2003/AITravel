@@ -1,5 +1,5 @@
+import './config/env.js';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -7,8 +7,6 @@ import { fileURLToPath } from 'url';
 
 import { registerRoutes } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5174;

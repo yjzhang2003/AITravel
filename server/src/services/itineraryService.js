@@ -91,6 +91,61 @@ export const itineraryService = {
     }
   },
 
+  async update({ itineraryId, userId, itinerary, budget, request }) {
+    if (!itineraryId || !itinerary) {
+      return null;
+    }
+
+    const normalized = normalizeItineraryShape(itinerary, request);
+    const computedBudget = budget ?? budgetService.calculate(normalized, { baseBudget: request?.budget });
+
+    const payload = {
+      itinerary: normalized,
+      budget: computedBudget,
+      updated_at: new Date().toISOString()
+    };
+
+    if (request) {
+      payload.request = { ...request };
+    }
+
+    if (!isSupabaseConfigured() || !supabaseAdminClient) {
+      // eslint-disable-next-line no-console
+      console.warn('[itineraryService] Supabase not configured, cannot update itinerary.');
+      return null;
+    }
+
+    try {
+      let query = supabaseAdminClient.from('itineraries').update(payload).eq('id', itineraryId);
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.select().single();
+
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error(`[itineraryService] Supabase update itinerary failed: ${error.message}`);
+        return null;
+      }
+
+      const storedItinerary = data?.itinerary;
+      const storedBudget = data?.budget;
+
+      // eslint-disable-next-line no-console
+      console.log('[itineraryService] Supabase update result:', { storedItinerary });
+
+      return {
+        itinerary: storedItinerary ? normalizeItineraryShape(storedItinerary, request) : normalized,
+        budget: storedBudget ?? computedBudget
+      };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`[itineraryService] Unexpected error during update: ${error.message}`);
+      return null;
+    }
+  },
+
   async calculateBudget({ itineraryId, overrides, itinerary }) {
     let currentItinerary = itinerary;
 
@@ -169,14 +224,7 @@ const isMissingItinerariesTable = (error) => {
   if (!error) return false;
 
   const message = String(error?.message ?? '').toLowerCase();
-  const code = error?.code;
-
   return (
-    message.includes('could not find the table') ||
-    message.includes('relation "public.itineraries" does not exist') ||
-    message.includes('schema cache') ||
-    code === 'PGRST301' ||
-    code === 'PGRST305' ||
-    code === '42P01'
+    message.includes('relation "public.itineraries" does not exist') || message.includes('schema cache')
   );
 };

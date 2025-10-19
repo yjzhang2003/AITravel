@@ -4,11 +4,13 @@ import { loadAmap } from '../utils/mapLoader.js';
 
 const defaultCenter = [116.397389, 39.908722];
 
-export const MapView = ({ itinerary, apiKey }) => {
+export const MapView = ({ itinerary, apiKey, onRouteSearch, searchingRoute = false }) => {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const [error, setError] = useState(null);
+  const [originInput, setOriginInput] = useState('');
+  const [destinationInput, setDestinationInput] = useState('');
 
   useEffect(() => {
     if (!containerRef.current || !itinerary || !apiKey) {
@@ -77,25 +79,63 @@ export const MapView = ({ itinerary, apiKey }) => {
     };
   }, [apiKey, itinerary]);
 
-  if (!apiKey) {
-    return (
-      <div className="panel muted">
-        <strong>提示：</strong>请在服务器环境变量中配置高德地图 Key 以启用地图展示。
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="panel error">
-        地图加载失败：{error}
-      </div>
-    );
-  }
+  const handleRouteSubmit = (event) => {
+    event.preventDefault();
+    const origin = originInput.trim();
+    const destination = destinationInput.trim();
+    if (!origin || !destination) return;
+    onRouteSearch?.({ origin, destination });
+  };
 
   return (
-    <div className="map-container" ref={containerRef}>
-      {!itinerary && <span className="muted">生成行程后将在此展示地点分布</span>}
-    </div>
+    <section className="panel">
+      <div className="panel-header">
+        <span>行程地图</span>
+      </div>
+
+      <form className="route-search" onSubmit={handleRouteSubmit}>
+        <div className="route-search-fields">
+          <label>
+            <span>起点</span>
+            <input
+              type="text"
+              value={originInput}
+              onChange={(event) => setOriginInput(event.target.value)}
+              placeholder="例如：酒店或景点名称"
+            />
+          </label>
+          <label>
+            <span>终点</span>
+            <input
+              type="text"
+              value={destinationInput}
+              onChange={(event) => setDestinationInput(event.target.value)}
+              placeholder="例如：景点名称"
+            />
+          </label>
+        </div>
+        <button className="secondary" type="submit" disabled={searchingRoute || !originInput.trim() || !destinationInput.trim()}>
+          {searchingRoute ? '规划中...' : '搜索路线'}
+        </button>
+      </form>
+
+      {!apiKey && (
+        <div className="map-placeholder muted">
+          <strong>提示：</strong>请在服务器环境变量中配置高德地图 Key 以启用地图展示。
+        </div>
+      )}
+
+      {apiKey && error && (
+        <div className="map-placeholder error">
+          地图加载失败：{error}
+        </div>
+      )}
+
+      {apiKey && !error && (
+        <div className="map-container" ref={containerRef}>
+          {!itinerary && <span className="muted">生成行程后将在此展示地点分布</span>}
+        </div>
+      )}
+    </section>
   );
 };

@@ -179,7 +179,7 @@ const sanitizeItineraryDraft = (draft) => {
   return result;
 };
 
-export const ItinerarySummary = ({ itinerary, onChange, mapApiKey }) => {
+export const ItinerarySummary = ({ itinerary, onChange, mapApiKey, routes }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(null);
 
@@ -250,13 +250,13 @@ export const ItinerarySummary = ({ itinerary, onChange, mapApiKey }) => {
       {isEditing ? (
         <ItineraryEditor draft={draft} setDraft={setDraft} mapApiKey={mapApiKey} />
       ) : (
-        <ItineraryView itinerary={itinerary} />
+        <ItineraryView itinerary={itinerary} routes={routes} />
       )}
     </section>
   );
 };
 
-const ItineraryView = ({ itinerary }) => (
+const ItineraryView = ({ itinerary, routes }) => (
   <>
     <h2>{safeText(itinerary.destination ?? itinerary?.meta?.destination ?? '行程概要')}</h2>
     {itinerary.meta && (
@@ -329,6 +329,42 @@ const ItineraryView = ({ itinerary }) => (
         <ul>
           {itinerary.transportationTips.map((tip, index) => (
             <li key={index}>{safeText(tip)}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {Array.isArray(routes) && routes.length > 0 && (
+      <div className="section">
+        <h3>最新路线规划</h3>
+        <ul className="route-list">
+          {routes.map((route, index) => (
+            <li key={index} className="route-item">
+              <div className="route-header">
+                <strong>
+                  {safeText(route?.origin?.name ?? '起点')} → {safeText(route?.destination?.name ?? '终点')}
+                </strong>
+                {route?.preference && <span className="route-tag">{safeText(route.preference)}</span>}
+              </div>
+              <p className="muted">
+                {route?.distanceKm != null && `距离约 ${route.distanceKm} 公里`}
+                {route?.distanceKm != null && route?.durationMinutes != null && ' · '}
+                {route?.durationMinutes != null && `预计 ${Math.round(route.durationMinutes)} 分钟`}
+              </p>
+              {Array.isArray(route?.legs) && route.legs.length > 0 && (
+                <ol className="route-steps">
+                  {route.legs.map((leg, legIndex) => (
+                    <li key={legIndex}>
+                      <span>{safeText(leg?.instruction ?? `步骤 ${legIndex + 1}`)}</span>
+                      <small>
+                        {leg?.distanceKm != null && `约 ${leg.distanceKm} 公里`}
+                        {leg?.distanceKm != null && leg?.durationMinutes != null && ' · '}
+                        {leg?.durationMinutes != null && `约 ${Math.round(leg.durationMinutes)} 分钟`}
+                      </small>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </li>
           ))}
         </ul>
       </div>
