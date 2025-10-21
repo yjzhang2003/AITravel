@@ -886,16 +886,24 @@ select {
 }
 
 .main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  overflow: hidden;
-}
+   display: grid;
+   grid-template-columns: 360px 1fr;
+   gap: 20px;
+   overflow: hidden;
+ }
 
 .main-pane {
-  overflow-y: auto;
-  min-height: 0;
-}
+   overflow-y: auto;
+   min-height: 0;
+ }
+
+ .plan-pane .panel {
+   margin-bottom: 16px;
+ }
+
+ .plan-pane .panel:last-child {
+   margin-bottom: 0;
+ }
 
 .chat-planner {
   flex-grow: 1;
@@ -906,9 +914,13 @@ select {
 }
 
 .chat-messages {
-  flex-grow: 1;
-  overflow-y: auto;
-}
+   flex-grow: 1;
+   overflow-y: auto;
+   display: flex;
+   flex-direction: column;
+   gap: 14px;
+   padding-right: 4px;
+ }
 
 .map-container {
   height: 280px;
