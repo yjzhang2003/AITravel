@@ -34,7 +34,6 @@ export const DashboardPage = ({
       <header className="app-top-bar">
         <div>
           <h1>AI 旅行规划师</h1>
-          <p>个性化的行程助手，随时调整和同步您的旅行计划。</p>
         </div>
         <div className="user-actions">
           <span className="user-chip">{userEmail}</span>
@@ -44,31 +43,35 @@ export const DashboardPage = ({
         </div>
       </header>
       {configHint && <div className="banner muted">{configHint}</div>}
-      <div className="grid dashboard-grid-container">
-        <div className="left-column">
-          <ChatPlanner
-            messages={chatMessages}
-            onSend={onChatSend}
-            onReset={onChatReset}
-            loading={chatLoading}
-          />
+      <div className="dashboard-content">
+        <aside className="sidebar">
           <ItineraryHistory itineraries={history} onSelect={onSelectHistory} onDelete={onDeleteHistory} />
-        </div>
-        <div className="right-column">
-          {error && <div className="panel error">{error}</div>}
-          {itinerary && canSaveItinerary && (
-            <button
-              className="secondary"
-              type="button"
-              onClick={onSaveItinerary}
-              disabled={savingItinerary || chatLoading}
-            >
-              {savingItinerary ? '保存中...' : '保存当前行程'}
-            </button>
-          )}
-          <MapView itinerary={itinerary} apiKey={mapKey} />
-          <ItinerarySummary itinerary={itinerary} onChange={onItineraryChange} mapApiKey={mapKey} routes={routes} />
-          <BudgetPanel budget={budget} onRecalculate={onRecalculateBudget} recalculating={budgetLoading} />
+        </aside>
+        <div className="main">
+          <div className="main-pane chat-pane">
+            <ChatPlanner
+              messages={chatMessages}
+              onSend={onChatSend}
+              onReset={onChatReset}
+              loading={chatLoading}
+            />
+          </div>
+          <div className="main-pane plan-pane">
+            {error && <div className="panel error">{error}</div>}
+            {itinerary && canSaveItinerary && (
+              <button
+                className="secondary"
+                type="button"
+                onClick={onSaveItinerary}
+                disabled={savingItinerary || chatLoading}
+              >
+                {savingItinerary ? '保存中...' : '保存当前行程'}
+              </button>
+            )}
+            <ItinerarySummary itinerary={itinerary} onChange={onItineraryChange} mapApiKey={mapKey} routes={routes} />
+            <BudgetPanel budget={budget} onRecalculate={onRecalculateBudget} recalculating={budgetLoading} />
+            <MapView itinerary={itinerary} apiKey={mapKey} />
+          </div>
         </div>
       </div>
     </div>

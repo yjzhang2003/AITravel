@@ -862,31 +862,54 @@ select {
 }
 
 .app-top-bar {
-  flex-shrink: 0;
-  margin: 16px 16px 0;
-}
-
-.dashboard-grid-container {
-  flex-grow: 1;
-  display: grid;
-  grid-template-columns: 40% 60%;
-  overflow: hidden;
-  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   padding: 16px;
 }
 
-.left-column,
-.right-column {
+.dashboard-content {
+  flex-grow: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.sidebar {
   overflow-y: auto;
-  padding: 1rem;
+  min-height: 0;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.main-pane {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .chat-planner {
   flex-grow: 1;
   height: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.chat-window {
+.chat-messages {
   flex-grow: 1;
+  overflow-y: auto;
+}
+
+.map-container {
+  height: 280px;
 }
