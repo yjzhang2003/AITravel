@@ -124,6 +124,13 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
     }
   };
 
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
+    }
+  };
+
   return (
     <section className="panel chat-planner">
       <div className="panel-header">
@@ -150,6 +157,7 @@ export const ChatPlanner = ({ messages, onSend, loading, onReset }) => {
               loading ? '请稍候...' : recording ? '录音中...点击话筒结束录音。' : '描述你的旅行想法，例如“想去西安玩三天”。'
             }
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={loading || recording || voiceLoading}
           />
           <div className="chat-input-actions">
