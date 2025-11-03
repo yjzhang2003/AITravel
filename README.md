@@ -1,101 +1,90 @@
-# AI Travel Planner (Web)
+# AI Travel Planner
 
-轻量级全栈 Web 项目，旨在根据用户偏好自动生成行程规划、预算建议，并提供语音输入和地图展示功能。项目前端基于 React + Vite，后端基于 Express，支持对接 Supabase、通用大语言模型 API、科大讯飞等语音识别服务以及高德/百度地图。
+面向用户体验的旅行规划系统：通过 AI 对话快速收集需求，自动生成可编辑的每日行程、费用预算与地图标记，并支持语音输入与历史管理。前端采用 React + Vite，后端采用 Express，所有能力均围绕“可用即见、可改可存”的功能设计展开。
 
-## 快速开始
+**界面布局**
+- 顶部栏：显示应用标题与当前用户（或体验模式），支持一键退出。
+- 左侧边栏：历史行程列表，可选择加载或删除（登录后可保存）。
+- 主区域（两列）：左侧为 AI 咨询对话，右侧为行程规划与地图、预算等信息展示。
 
-### 1. 安装依赖
+**核心功能**
+- AI 旅行顾问（聊天）
+  - 显示对话历史，支持 `Enter` 发送、`Shift+Enter` 换行。
+  - 一键“重新开始”对话，让顾问回到欢迎语引导。
+  - 根据用户输入自动更新“行程需求”、触发重生成或局部微调，并返回提示与问题列表。
+  - 智能调用系统工具：
+    - 更新行程（在用户请求调整时优先局部修改），
+    - 规划路线（返回距离/时长/关键步骤），
+    - 估算预算（生成或重新估算）。
 
-```bash
-npm install
-```
+- 行程需求表（生成入口）
+  - 目的地、时间范围、预算、同行人数、偏好标签与备注。
+  - 语音输入：浏览器 Web Speech（可用自动启用）或后端录音转写模式；识别结果自动写入备注。
+  - 一键生成行程，后续可在编辑器中细调。
 
-### 2. 配置环境变量
+- 行程概览与编辑器
+  - 概览：目的地与时间、每日安排、亮点、住宿推荐、交通建议等结构化展示。
+  - 编辑器：支持“基本信息、每日计划、亮点、住宿、交通建议”全面编辑与增删。
+  - 地理能力：在编辑亮点时支持地理编码（需配置地图 Key），以便后续地图标注。
+  - 保存：在登录状态下可写入服务端以持久化。
 
-复制 `server/.env.example` 为 `server/.env`，填入自己的 Supabase、LLM、语音识别、地图等密钥（切记不要将密钥提交至代码库；所有密钥都只保存在服务端）。
+- 费用预算
+  - 按行程计算总费用与分项（交通、住宿、餐饮、娱乐、机动）。
+  - 一键“重新估算”，便于在编辑后刷新成本预期。
 
-### 3. 启动开发环境
+- 地图展示
+  - 自动根据每日亮点做地点标记，信息窗显示名称与描述。
+  - 自适应视野（FitView），一键聚焦到所有标记点。
+  - 路线展示：对话中规划出的路线会以结构化列表显示在行程视图中（包含距离、时长、步骤）。
 
-```bash
-npm run dev
-```
+- 历史行程
+  - 列表：展示目的地与创建时间；点击加载。
+  - 删除：登录状态可删除指定历史记录。
+  - 保存：登录用户在右侧编辑器完成后可保存行程。
 
-前端默认运行在 <http://localhost:5173>，后端 API 默认运行在 <http://localhost:5174>。
+**使用流程**
+- 登录或进入体验模式。
+- 在左列聊天中描述旅行想法（语音或文字），系统将逐步追问与完善需求。
+- 生成行程后，在右列查看概览，并在编辑器中进行细化或修改。
+- 查看预算、地图标注与路线（如需），并根据需要重新估算预算或调整行程。
+- 登录状态下保存行程，后续可在侧边栏快速调出。
 
-### 4. Docker 部署
+**交互细节**
+- 发送消息：`Enter` 直接发送，`Shift+Enter` 换行。
+- 对话重置：点击“重新开始”回到欢迎引导。
+- 地图 Key 未配置时：地图面板提示缺失，不影响其他功能。
+- 语音模式：优先使用浏览器 Web Speech；不支持时自动切换到后端录音转写。
 
-```bash
-docker build -t ai-travel-planner .
-docker run -p 5174:5174 --env-file server/.env ai-travel-planner
-```
+**配置与降级**
+- 配置状态提示：顶部或内容区域显示系统能力可用性（Supabase/LLM/Voice/Map）。
+- 降级策略：
+  - 无 LLM：返回结构化示例行程，确保前端可完整演示。
+  - 无地图 Key：地图面板显示提示，相关编辑器的地理编码禁用。
+  - 路线规划失败：前端显示可理解错误信息，不影响其他模块。
 
-将 `SERVE_CLIENT=true` 写入环境变量后，容器会同时托管 `client/dist` 静态资源。
+**账号与数据**
+- 登录与注册：邮箱+密码，成功后显示当前用户；退出后回到登录页或体验模式。
+- 历史与保存：登录用户可保存多份行程；体验模式下不保存但可完整试用。
 
-### 5. GitHub Actions 持续集成
+**后端接口（前端实际使用）**
+- 配置：`GET /api/config/status`、`GET /api/config/map-key`
+- 对话：`POST /api/itineraries/chat/converse`
+- 行程：`GET /api/itineraries`、`POST /api/itineraries`、`DELETE /api/itineraries/:id`
+- 预算：`POST /api/itineraries/:id/budget`
+- 语音：`POST /api/voice/transcribe`
+- 认证：`POST /api/auth/login`、`POST /api/auth/register`
 
-仓库中提供 `.github/workflows/docker-publish.yml`，需要在仓库 Secrets 中配置：
+**端口与运行**
+- 开发：前端 `5173`，后端 `5174`。
+- 生产容器：后端监听 `5174`；`SERVE_CLIENT=true` 时同时托管打包后前端资源。
 
-- `ALIYUN_REGISTRY`（例如 `registry.cn-hangzhou.aliyuncs.com`）
-- `ALIYUN_USERNAME` / `ALIYUN_PASSWORD`
-- `ALIYUN_REPOSITORY`（例如 `your-namespace/ai-travel-planner`）
+**常见问题**
+- 发送键不生效：已支持 `Enter` 发送；若浏览器禁用事件或输入框失焦，请点击输入框后重试。
+- 地图不显示：确认服务端环境变量 `AMAP_API_KEY` 已配置，且 `/api/config/map-key` 可返回有效 Key。
+- 预算为 0 或分项缺失：行程结构不完整或示例数据触发降级，可在编辑器完善后点击“重新估算”。
 
-工作流会在 push `main` 或手动触发时构建镜像并推送到阿里云镜像仓库。
+**目录结构（概要）**
+- `client/`：页面（Auth、Dashboard）、组件（ChatPlanner、ItinerarySummary、BudgetPanel、MapView、ItineraryHistory、VoiceInput）与样式。
+- `server/`：路由、控制器与服务（LLM、预算、工具、语音），`/health` 健康检查与错误处理。
 
-## 环境变量
-
-在 `server/.env` 中维护所有第三方服务密钥，主要字段包括：
-
-- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY`
-- `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL`
-- `VOICE_API_URL` / `VOICE_API_KEY` / `VOICE_SECRET_KEY` / `VOICE_APP_ID`（支持 HTTPS 或 WebSocket，科大讯飞需使用 WebSocket 并填写 AppID、APIKey、APISecret）
-- `AMAP_API_KEY`（高德 Web JS API Key）
-
-前端会通过受控接口读取必要信息，但不会显示或缓存任何密钥。
-
-如果需要在 Supabase 中持久化行程数据，请提前创建 `itineraries` 表，例如：
-
-```sql
-create table if not exists public.itineraries (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users (id) on delete cascade,
-  request jsonb,
-  itinerary jsonb,
-  budget jsonb,
-  created_at timestamptz default now()
-);
-
-create index if not exists idx_itineraries_user_id on public.itineraries(user_id);
-```
-
-若表未创建，后端会自动回退到示例数据，但不会写入 Supabase。
-
-## 关键特性
-
-- ✅ LLM 聊天式需求采集：前端提供 AI 对话框，智能引导用户补充需求并实时生成行程。
-- ✅ 语音行程需求输入：前端内置浏览器 Web Speech API 方案，并可通过后端代理接入科大讯飞等服务。
-- ✅ 智能行程规划：后端通过可配置的大模型 API 生成行程草案，并在无密钥时自动返回示例数据。
-- ✅ 费用预算管理：支持按行程生成费用估算，并允许在前端手动调整、保存预算方案。
-- ✅ 用户认证与云端数据：集成 Supabase Auth 与数据库表结构示例，可保存多份行程。
-- ✅ 全新前端体验：独立登录页 + 仪表盘布局，支持一键进入演示模式。
-- ✅ 地图为主的交互展示：后端托管高德地图 Key，前端自动加载并依据行程落点展示地点标记。
-- ✅ DevOps 友好：附带 Dockerfile 与 GitHub Actions CI/CD 模板，可将镜像推送到阿里云镜像仓库。
-
-## 项目结构
-
-```
-.
-├── client               # React + Vite 前端
-├── server               # Express 后端
-├── package.json         # 顶层 workspace 管理
-└── README.md
-```
-
-## 安全注意事项
-
-- 所有 API Key 通过环境变量或运行时输入，不要写死在仓库中。
-- 建议在部署环境中使用密钥管理服务（如阿里云 KMS、Vault、Supabase Secrets 等）。
-
-## 后续步骤
-
-- 阅读 `client/README.md` 了解前端语音、地图配置。
-- 查看 `server/README.md` 获取 Supabase 表结构及 API 说明。
+如需将文档扩展为“演示脚本”或“运维手册”（例如多用户协作、数据备份、日志规范），可以在此基础上继续补充场景化说明。
